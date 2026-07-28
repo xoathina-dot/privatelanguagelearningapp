@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gg-app-shell-v1';
+const CACHE_NAME = 'gg-app-shell-v2';
 const SHELL_FILES = [
   '/',
   '/styles.css',
