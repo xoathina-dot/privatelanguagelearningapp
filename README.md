@@ -58,6 +58,32 @@ npm start
 
 Server läuft dann unter http://localhost:3000.
 
+## Als iOS-App nutzen
+
+Die App ist bereits als **PWA (Progressive Web App)** eingerichtet — das bedeutet, sie lässt sich auf
+dem iPhone wie eine echte App installieren, ganz ohne App Store:
+
+1. Öffne die Replit-URL der App in **Safari** (wichtig: muss Safari sein, nicht Chrome — nur Safari
+   bietet auf iOS die "Zum Home-Bildschirm"-Funktion).
+2. Tippe auf das Teilen-Symbol (Viereck mit Pfeil nach oben) in der unteren Leiste.
+3. Wähle **"Zum Home-Bildschirm"**.
+4. Fertig — auf dem Home-Bildschirm erscheint ein Icon, die App öffnet sich im Vollbild ohne
+   Safari-Leiste, und die statischen Teile funktionieren dank Service Worker auch kurz offline.
+
+Das ist für eine private 2-Personen-App der pragmatischste Weg: kostenlos, kein Mac nötig, keine
+Apple-Developer-Mitgliedschaft, kein App-Store-Review.
+
+**Alternative — eine "echte" native App (Capacitor):** Falls ihr später mehr wollt (z. B. echte
+Push-Benachrichtigungen, Verteilung über TestFlight, ein Icon, das sich 1:1 wie eine native App
+verhält), lässt sich dieses Projekt mit [Capacitor](https://capacitorjs.com) in ein natives Xcode-Projekt
+verpacken. Das braucht dafür:
+- einen **Mac mit Xcode**
+- ein **Apple-Developer-Konto** (99 $/Jahr) für eine dauerhafte Installation auf dem Gerät bzw. TestFlight
+  (ohne Konto lässt sich eine selbst gebaute App nur 7 Tage lang kostenlos über Xcode auf einem Gerät halten)
+
+Das ist deutlich mehr Aufwand für einen Nutzen, der bei einer App für zwei Personen meist nicht nötig
+ist — sag Bescheid, falls das trotzdem der gewünschte Weg ist, dann richte ich das Capacitor-Projekt ein.
+
 ## Persistenz & Backup
 
 Alle Fortschritte (Streak, XP, abgeschlossene Lektionen, Vokabel-Favoriten, Nachrichten, Tutor-Chat)

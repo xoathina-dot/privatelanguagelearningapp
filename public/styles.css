@@ -55,11 +55,12 @@ input, button { font-family: inherit; }
 /* ---------- Login ---------- */
 .login-screen {
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
   background: #e4ded3;
-  padding: 20px;
+  padding: max(20px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom));
 }
 .login-card {
   width: 100%;
@@ -125,6 +126,7 @@ input, button { font-family: inherit; }
   width: 100%;
   max-width: 430px;
   min-height: calc(100vh - 48px);
+  min-height: calc(100dvh - 48px);
   background: var(--color-bg);
   border-radius: 32px;
   box-shadow: var(--shadow-lg);
@@ -134,14 +136,14 @@ input, button { font-family: inherit; }
 }
 @media (max-width: 480px) {
   .app-root { padding: 0; }
-  .phone { border-radius: 0; min-height: 100vh; max-width: 100%; }
+  .phone { border-radius: 0; min-height: 100vh; min-height: 100dvh; max-width: 100%; }
 }
 
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 22px 20px 16px;
+  padding: calc(22px + env(safe-area-inset-top)) 20px 16px;
 }
 .header-title {
   font-family: var(--font-heading);
@@ -340,7 +342,7 @@ input, button { font-family: inherit; }
 .tabbar {
   position: absolute; bottom: 0; left: 0; right: 0; z-index: 40; display: flex;
   background: var(--c-surface); box-shadow: 0 -2px 14px rgba(0,0,0,0.06);
-  padding-bottom: 20px; border-radius: 26px 26px 0 0;
+  padding-bottom: calc(20px + env(safe-area-inset-bottom)); border-radius: 26px 26px 0 0;
 }
 .tab-btn {
   flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
