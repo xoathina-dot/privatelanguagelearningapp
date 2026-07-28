@@ -28,6 +28,7 @@ function getUserById(id) {
 
 function requireAuth(req, res, next) {
   const token = req.cookies && req.cookies[COOKIE_NAME];
+  console.log('[requireAuth] path:', req.path, '| cookie present:', !!token, '| all cookies:', JSON.stringify(Object.keys(req.cookies || {})));
   if (!token) return res.status(401).json({ error: 'not_authenticated' });
   try {
     const payload = jwt.verify(token, JWT_SECRET);
@@ -36,6 +37,7 @@ function requireAuth(req, res, next) {
     req.user = user;
     next();
   } catch (e) {
+    console.log('[requireAuth] jwt error:', e.message);
     return res.status(401).json({ error: 'not_authenticated' });
   }
 }
