@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Γεια & Hallo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div id="login-screen" class="login-screen">
+  <div class="login-card">
+    <div class="login-title">Γεια &amp; Hallo</div>
+    <div class="login-sub">Private Lern-App für zwei</div>
+    <form id="login-form">
+      <input id="login-username" class="input" type="text" placeholder="Benutzername" autocomplete="username" required />
+      <input id="login-password" class="input" type="password" placeholder="Passwort" autocomplete="current-password" required />
+      <div id="login-error" class="login-error" hidden></div>
+      <button type="submit" class="btn-primary">Einloggen</button>
+    </form>
+  </div>
+</div>
+
+<div id="app-root" class="app-root" hidden></div>
+
+<script src="app.js"></script>
+</body>
+</html>
