@@ -1,6 +1,6 @@
 const express = require('express');
 const db = require('../db');
-const { requireAuth } = require('../auth');
+const { requireAuth, getUserById } = require('../auth');
 const { getCourse, getAllLessonsFlat, findLesson } = require('../content');
 
 const router = express.Router();
@@ -16,10 +16,19 @@ function completedLessonIds(userId) {
   return new Set(rows.map(r => r.lesson_id));
 }
 
-function buildUnitsWithState(user) {
-  const course = getCourse(user.target_lang);
-  const flat = getAllLessonsFlat(user.target_lang);
-  const done = completedLessonIds(user.id);
+// For a 'companion' account, all progress/dashboard views should reflect the
+// partner (the actual learner) rather than the companion's own (empty) record.
+function effectiveLearner(user) {
+  if (user.role === 'companion') {
+    return user.partner_id ? getUserById(user.partner_id) : null;
+  }
+  return user;
+}
+
+function buildUnitsWithState(learner) {
+  const course = getCourse(learner.target_lang);
+  const flat = getAllLessonsFlat(learner.target_lang);
+  const done = completedLessonIds(learner.id);
   const firstNotDoneIndex = flat.findIndex(l => !done.has(l.id));
 
   return course.units.map(unit => ({
@@ -37,15 +46,15 @@ function buildUnitsWithState(user) {
   }));
 }
 
-function currentLevelInfo(user) {
-  const flat = getAllLessonsFlat(user.target_lang);
-  const done = completedLessonIds(user.id);
+function currentLevelInfo(learner) {
+  const flat = getAllLessonsFlat(learner.target_lang);
+  const done = completedLessonIds(learner.id);
   const allDone = flat.length > 0 && flat.every(l => done.has(l.id));
   const currentLesson = flat.find(l => !done.has(l.id));
-  const course = getCourse(user.target_lang);
+  const course = getCourse(learner.target_lang);
   let unitLevel = course.units[0] ? course.units[0].level : 'A1';
   if (currentLesson) {
-    const found = findLesson(user.target_lang, currentLesson.id);
+    const found = findLesson(learner.target_lang, currentLesson.id);
     if (found) unitLevel = found.unit.level;
   } else if (course.units.length) {
     unitLevel = course.units[course.units.length - 1].level;
@@ -55,21 +64,45 @@ function currentLevelInfo(user) {
   return { level: unitLevel, levelProgressLabel: allDone ? `${unitLevel} → ${nextLevel}` : unitLevel, allDone };
 }
 
+// Reusable by the tutor route (companion coach needs to know what the partner is on).
+function getCurrentLesson(learner) {
+  const flat = getAllLessonsFlat(learner.target_lang);
+  const done = completedLessonIds(learner.id);
+  const next = flat.find(l => !done.has(l.id));
+  if (!next) return null;
+  return findLesson(learner.target_lang, next.id);
+}
+
+function emptyDashboard(isCompanionView) {
+  return {
+    units: [], streak: 0, xp: 0, level: 'A1', dailyGoalPct: 0, dailyGoalLabel: `0 / ${DAILY_GOAL_XP} XP`,
+    isCompanionView, learnerDisplayName: null,
+  };
+}
+
 router.get('/', requireAuth, (req, res) => {
-  const user = req.user;
-  const units = buildUnitsWithState(user);
-  const { level } = currentLevelInfo(user);
+  const isCompanionView = req.user.role === 'companion';
+  const learner = effectiveLearner(req.user);
+  if (!learner) return res.json(emptyDashboard(isCompanionView));
+
+  const units = buildUnitsWithState(learner);
+  const { level } = currentLevelInfo(learner);
   res.json({
     units,
-    streak: user.streak,
-    xp: user.xp,
+    streak: learner.streak,
+    xp: learner.xp,
     level,
-    dailyGoalPct: Math.min(100, Math.round((user.xp_today / DAILY_GOAL_XP) * 100)),
-    dailyGoalLabel: `${Math.min(user.xp_today, DAILY_GOAL_XP)} / ${DAILY_GOAL_XP} XP`,
+    dailyGoalPct: Math.min(100, Math.round((learner.xp_today / DAILY_GOAL_XP) * 100)),
+    dailyGoalLabel: `${Math.min(learner.xp_today, DAILY_GOAL_XP)} / ${DAILY_GOAL_XP} XP`,
+    isCompanionView,
+    learnerDisplayName: isCompanionView ? learner.display_name : null,
   });
 });
 
 router.post('/:lessonId/complete', requireAuth, (req, res) => {
+  if (req.user.role === 'companion') {
+    return res.status(403).json({ error: 'companion_read_only' });
+  }
   const user = req.user;
   const { lessonId } = req.params;
   const found = findLesson(user.target_lang, lessonId);
@@ -109,13 +142,17 @@ router.post('/:lessonId/complete', requireAuth, (req, res) => {
     dailyGoalPct: Math.min(100, Math.round((updatedUser.xp_today / DAILY_GOAL_XP) * 100)),
     dailyGoalLabel: `${Math.min(updatedUser.xp_today, DAILY_GOAL_XP)} / ${DAILY_GOAL_XP} XP`,
     xpEarned: already ? 0 : found.lesson.xp,
+    isCompanionView: false,
   });
 });
 
 router.get('/:lessonId/quiz', requireAuth, (req, res) => {
+  if (req.user.role === 'companion') {
+    return res.status(403).json({ error: 'companion_read_only' });
+  }
   const found = findLesson(req.user.target_lang, req.params.lessonId);
   if (!found) return res.status(404).json({ error: 'lesson_not_found' });
   res.json({ lessonTitle: found.lesson.title, unitTitle: found.unit.title, quiz: found.lesson.quiz, xp: found.lesson.xp });
 });
 
-module.exports = { router, currentLevelInfo, DAILY_GOAL_XP };
+module.exports = { router, currentLevelInfo, DAILY_GOAL_XP, effectiveLearner, getCurrentLesson, buildUnitsWithState };

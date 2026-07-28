@@ -23,7 +23,8 @@ db.exec(`
     xp_today INTEGER NOT NULL DEFAULT 0,
     last_active_date TEXT,
     dark_mode INTEGER NOT NULL DEFAULT 0,
-    notifications_enabled INTEGER NOT NULL DEFAULT 1
+    notifications_enabled INTEGER NOT NULL DEFAULT 1,
+    role TEXT NOT NULL DEFAULT 'learner'
   );
 
   CREATE TABLE IF NOT EXISTS lesson_progress (
@@ -57,5 +58,11 @@ db.exec(`
     created_at TEXT NOT NULL
   );
 `);
+
+// Light migration: add the 'role' column if this db was created before it existed.
+const userColumns = db.prepare("PRAGMA table_info(users)").all();
+if (!userColumns.some(c => c.name === 'role')) {
+  db.exec("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'learner'");
+}
 
 module.exports = db;

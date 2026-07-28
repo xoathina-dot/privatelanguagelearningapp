@@ -2,6 +2,7 @@ const express = require('express');
 const db = require('../db');
 const { requireAuth } = require('../auth');
 const { getCourse } = require('../content');
+const { effectiveLearner } = require('./lessons');
 
 const router = express.Router();
 
@@ -11,10 +12,19 @@ function favoriteIds(userId) {
 }
 
 router.get('/', requireAuth, (req, res) => {
-  const course = getCourse(req.user.target_lang);
+  const isCompanionView = req.user.role === 'companion';
+  const learner = effectiveLearner(req.user);
+  if (!learner) return res.json({ vocab: [], isCompanionView, learnerDisplayName: null, courseLabel: null });
+
+  const course = getCourse(learner.target_lang);
   const favs = favoriteIds(req.user.id);
   const vocab = course.vocab.map(v => ({ ...v, fav: favs.has(v.id) }));
-  res.json({ vocab });
+  res.json({
+    vocab,
+    isCompanionView,
+    learnerDisplayName: isCompanionView ? learner.display_name : null,
+    courseLabel: course.label,
+  });
 });
 
 router.post('/:vocabId/toggle-favorite', requireAuth, (req, res) => {

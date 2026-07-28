@@ -1,9 +1,14 @@
 # Γεια & Hallo — private Griechisch-Deutsch Lern-App
 
-Eine private Lern-App für zwei Personen: eine lernt Deutsch (native Griechisch), die andere
-lernt Griechisch (native Deutsch). Mit Streak/XP, Lektionen mit Quiz, einem echten AI-Tutor-Chat,
-einem gemeinsamen Nachrichten-Bereich mit KI-Übersetzung & Grammatik-Korrektur, einem
-Vokabeltrainer und einem Profil-Bereich.
+Eine private Lern-App für zwei Personen. Zwei Rollen sind möglich:
+- **learner**: lernt selbst (Lektionen, Quiz, Streak/XP, Vokabeln, Sprach-Tutor)
+- **companion**: reine/r Beobachter:in/Unterstützer:in — sieht statt eigener Lektionen den
+  Fortschritt des/der Partner:in (Streak, XP, Level, aktuelle Lektion), und bekommt im Tutor-Tab
+  einen Support-Coach statt eines Sprachlehrers (Tipps zur Motivation, Erklärungen dessen, was der
+  Partner/die Partnerin gerade lernt).
+
+Beide teilen sich außerdem: einen gemeinsamen Nachrichten-Bereich mit KI-Übersetzung &
+Grammatik-Korrektur, und ein Profil mit Einstellungen.
 
 ## Architektur
 
@@ -28,9 +33,25 @@ Vokabeltrainer und einem Profil-Bereich.
 3. **Secrets setzen** (Tab-Symbol "Secrets" in der Seitenleiste, NICHT in `.env` committen):
    - `JWT_SECRET` — eine lange zufällige Zeichenkette
    - `ANTHROPIC_API_KEY` — dein API-Key von https://console.anthropic.com
-   - `USER1_USERNAME`, `USER1_PASSWORD`, `USER1_DISPLAY_NAME`, `USER1_TARGET_LANG` (`de` oder `el`)
-   - `USER2_USERNAME`, `USER2_PASSWORD`, `USER2_DISPLAY_NAME`, `USER2_TARGET_LANG`
-   - Siehe `.env.example` für alle Variablen und Beispielwerte.
+   - `USER1_USERNAME`, `USER1_PASSWORD`, `USER1_DISPLAY_NAME`
+   - `USER1_ROLE` — `learner` (macht selbst Lektionen/Quiz) oder `companion` (reiner Beobachter:
+     sieht statt eigener Lektionen den Fortschritt des Partners, bekommt einen Support-Coach statt
+     Sprach-Tutor)
+   - `USER1_TARGET_LANG` (`de`/`el`) und `USER1_NATIVE_LANG` (`de`/`el`) — bei `companion` entspricht
+     `TARGET_LANG` der Sprache, die der/die Partner:in lernt (fürs Dashboard & Vokabel-Referenz)
+   - Dieselben vier Variablen nochmal mit Präfix `USER2_...`
+   - Siehe `.env.example` für alle Variablen, Beispielwerte und genauere Erklärung.
+
+   **Beispiel für "ich beobachte/unterstütze, er lernt Deutsch":**
+   ```
+   USER1_ROLE=companion
+   USER1_TARGET_LANG=de
+   USER1_NATIVE_LANG=el
+
+   USER2_ROLE=learner
+   USER2_TARGET_LANG=de
+   USER2_NATIVE_LANG=el
+   ```
 4. **Starten:** Klick auf "Run" (führt `npm install` beim ersten Mal automatisch aus, dann `npm start`).
    Die Konsole zeigt: `Seed complete. Accounts ready: ...` — das sind eure zwei Accounts.
 5. **Öffnen & einloggen:** Im Webview-Fenster (oder über die öffentliche `.replit.app`/`.replit.dev`-URL)

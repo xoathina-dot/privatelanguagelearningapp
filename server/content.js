@@ -186,6 +186,12 @@ const COURSES = {
   },
 };
 
+const COMPANION_CHIPS = [
+  'Was lernt er/sie gerade?',
+  'Wie kann ich ihn/sie motivieren?',
+  'Erkläre mir kurz seine/ihre aktuelle Lektion',
+];
+
 function getCourse(targetLang) {
   return COURSES[targetLang] || COURSES.de;
 }
@@ -210,4 +216,4 @@ function findLesson(targetLang, lessonId) {
   return null;
 }
 
-module.exports = { COURSES, getCourse, getAllLessonsFlat, findLesson };
+module.exports = { COURSES, getCourse, getAllLessonsFlat, findLesson, COMPANION_CHIPS };

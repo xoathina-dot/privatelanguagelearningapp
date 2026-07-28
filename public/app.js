@@ -8,6 +8,7 @@
     lessons: null,
     lastPartnerMessage: null,
     vocab: [],
+    vocabMeta: null,
     vocabFilter: 'all',
     messages: [],
     messageDraft: '',
@@ -187,6 +188,7 @@
   async function loadVocab() {
     const v = await api('/vocab');
     state.vocab = v.vocab;
+    state.vocabMeta = { isCompanionView: v.isCompanionView, learnerDisplayName: v.learnerDisplayName, courseLabel: v.courseLabel };
   }
 
   async function loadProfile() {
@@ -384,8 +386,15 @@
   function renderHome() {
     if (!state.lessons) return '';
     const l = state.lessons;
+    const isCompanion = !!l.isCompanionView;
     const current = currentLessonInfo();
+
+    if (isCompanion && !l.learnerDisplayName) {
+      return `<div class="empty-state">Noch kein verbundener Partner-Account gefunden.</div>`;
+    }
+
     return `
+      ${isCompanion ? `<div class="section-row" style="margin-bottom:8px"><h6>Fortschritt von ${escapeHtml(l.learnerDisplayName)}</h6></div>` : ''}
       <div class="stat-grid">
         <div class="stat-card stat-streak"><div class="value"><span class="gg-flame">🔥</span> ${l.streak}</div><div class="label">Σερί<br>Streak</div></div>
         <div class="stat-card stat-xp"><div class="value">${l.xp}</div><div class="label">XP<br>Total</div></div>
@@ -404,7 +413,9 @@
             <span class="pill-xp">+${current.lesson.xp} XP</span>
           </div>
           <div class="card-sub">${escapeHtml(current.unit.sub)} · Ενότητα: ${escapeHtml(current.unit.title)}</div>
-          <button class="btn-cta" data-action="open-lesson" data-lesson="${current.lesson.id}">Ξεκίνα το μάθημα →</button>
+          ${isCompanion
+            ? `<button class="btn-cta" data-action="go-tab" data-tab="lessons">Δες την πρόοδό του/της →</button>`
+            : `<button class="btn-cta" data-action="open-lesson" data-lesson="${current.lesson.id}">Ξεκίνα το μάθημα →</button>`}
         </div>
       ` : `
         <div class="card"><div class="card-sub">Όλα τα μαθήματα ολοκληρώθηκαν προς το παρόν 🎉</div></div>
@@ -412,7 +423,9 @@
 
       <div class="tip-card">
         <div class="tip-title">✦ Πρόταση AI · AI suggests</div>
-        <div class="tip-text">Ρώτα τον Δάσκαλο AI για ό,τι σε μπερδεύει σήμερα, ή εξασκήσου σε έναν διάλογο.</div>
+        <div class="tip-text">${isCompanion
+          ? 'Ρώτα τον Δάσκαλο AI πώς να τον/την υποστηρίξεις σήμερα.'
+          : 'Ρώτα τον Δάσκαλο AI για ό,τι σε μπερδεύει σήμερα, ή εξασκήσου σε έναν διάλογο.'}</div>
       </div>
 
       ${state.lastPartnerMessage ? `
@@ -432,7 +445,14 @@
 
   function renderLessons() {
     if (!state.lessons) return '';
-    return state.lessons.units.map(unit => `
+    const isCompanion = !!state.lessons.isCompanionView;
+    if (isCompanion && !state.lessons.learnerDisplayName) {
+      return `<div class="empty-state">Noch kein verbundener Partner-Account gefunden.</div>`;
+    }
+    const heading = isCompanion
+      ? `<div class="section-row" style="margin-bottom:8px"><h6>Η πρόοδος του/της ${escapeHtml(state.lessons.learnerDisplayName)}</h6></div>`
+      : '';
+    return heading + state.lessons.units.map(unit => `
       <div class="unit-block">
         <div class="unit-head">
           <div>
@@ -449,7 +469,7 @@
               : lesson.state === 'current'
                 ? 'background:var(--color-accent);color:#fff'
                 : 'background:color-mix(in srgb, var(--color-text) 8%, transparent);color:var(--c-muted)';
-            const clickable = lesson.state === 'done' || lesson.state === 'current';
+            const clickable = !isCompanion && (lesson.state === 'done' || lesson.state === 'current');
             return `
               <button class="lesson-row ${clickable ? 'active' : 'locked'}" ${clickable ? `data-action="open-lesson" data-lesson="${lesson.id}"` : 'disabled'}>
                 <div class="lesson-dot" style="${dotClass}">${dotContent}</div>
@@ -467,9 +487,12 @@
   }
 
   function renderTutor() {
+    const isCompanion = state.user.role === 'companion';
     return `
       <div class="chat-intro">
-        <div class="primary">Ρώτα με για γραμματική, λεξιλόγιο ή εξάσκησε μια συζήτηση.</div>
+        <div class="primary">${isCompanion
+          ? 'Ρώτα με πώς να τον/την υποστηρίξεις, ή τι μαθαίνει αυτή τη στιγμή.'
+          : 'Ρώτα με για γραμματική, λεξιλόγιο ή εξάσκησε μια συζήτηση.'}</div>
       </div>
       <div class="chat-list">
         ${state.tutorMessages.map(m => `
@@ -530,6 +553,9 @@
       return v.cat === state.vocabFilter;
     });
     return `
+      ${state.vocabMeta && state.vocabMeta.isCompanionView && state.vocabMeta.learnerDisplayName ? `
+        <div class="section-row" style="margin-bottom:8px"><h6>Λεξιλόγιο: ${escapeHtml(state.vocabMeta.learnerDisplayName)}</h6></div>
+      ` : ''}
       <div class="chip-row">
         ${filters.map(f => `
           <button class="chip vocab-chip ${state.vocabFilter === f.id ? 'active' : ''}" data-action="vocab-filter" data-filter="${f.id}">${f.label}</button>
@@ -555,20 +581,23 @@
   function renderProfile() {
     if (!state.profile) return '';
     const p = state.profile;
+    const isCompanion = p.role === 'companion';
     return `
       <div class="profile-head">
         <div class="profile-avatar">${escapeHtml(p.avatarInitial)}</div>
         <div>
           <div class="profile-name">${escapeHtml(p.displayName)}</div>
-          <div class="profile-sub">Μαθαίνει ${escapeHtml(p.targetLangLabel)}</div>
+          <div class="profile-sub">${isCompanion
+            ? `Υποστηρίζει${p.partnerDisplayName ? ': ' + escapeHtml(p.partnerDisplayName) : ''}`
+            : `Μαθαίνει ${escapeHtml(p.targetLangLabel || '')}`}</div>
         </div>
       </div>
       <div class="profile-stats">
-        <div class="stat-card stat-streak"><div class="value">${p.streak}</div><div class="label">Σερί ημερών</div></div>
-        <div class="stat-card stat-xp"><div class="value">${p.xp}</div><div class="label">Σύνολο XP</div></div>
+        <div class="stat-card stat-streak"><div class="value">${p.streak}</div><div class="label">${isCompanion ? 'Σερί ημερών (δικό του/της)' : 'Σερί ημερών'}</div></div>
+        <div class="stat-card stat-xp"><div class="value">${p.xp}</div><div class="label">${isCompanion ? 'Σύνολο XP (δικό του/της)' : 'Σύνολο XP'}</div></div>
       </div>
       <div class="profile-list">
-        <div class="profile-row"><span>Γλώσσα εκμάθησης</span><span class="value">${escapeHtml(p.targetLangLabel)}</span></div>
+        <div class="profile-row"><span>${isCompanion ? 'Ο/Η σύντροφός σου μαθαίνει' : 'Γλώσσα εκμάθησης'}</span><span class="value">${escapeHtml(p.targetLangLabel || '—')}</span></div>
         <div class="profile-row"><span>Επίπεδο</span><span class="value">${escapeHtml(p.levelProgressLabel)}</span></div>
         <div class="profile-row"><span>Συνδεδεμένη επαφή</span><span class="value">${escapeHtml(p.partnerDisplayName || '—')}</span></div>
         <div class="profile-row">

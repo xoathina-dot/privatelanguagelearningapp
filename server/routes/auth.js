@@ -14,6 +14,7 @@ function publicUser(u) {
     avatarInitial: u.avatar_initial,
     nativeLang: u.native_lang,
     targetLang: u.target_lang,
+    role: u.role,
     streak: u.streak,
     xp: u.xp,
     darkMode: !!u.dark_mode,

@@ -70,4 +70,24 @@ async function tutorReply(history, targetLang, nativeLang) {
   return callClaude({ system, messages, maxTokens: 350 });
 }
 
-module.exports = { translateText, checkGrammar, tutorReply, LANG_NAMES };
+async function companionCoachReply(history, partnerName, partnerTargetLang, currentLessonInfo) {
+  const targetLangName = LANG_NAMES[partnerTargetLang] || partnerTargetLang;
+  const lessonLine = currentLessonInfo
+    ? `${partnerName} is currently working on the lesson "${currentLessonInfo.lesson.title}" ` +
+      `(unit: "${currentLessonInfo.unit.title}", level ${currentLessonInfo.unit.level}).`
+    : `${partnerName} has completed all currently available lessons.`;
+  const system = `You are a warm, practical coach helping the user support their partner, ${partnerName}, ` +
+    `who is learning ${targetLangName} (A1-A2 level). The user themselves is NOT learning the language — ` +
+    `their goal is to understand what their partner is working on and how to encourage them effectively. ` +
+    `${lessonLine} ` +
+    `Give short, concrete, empathetic answers (2-5 sentences): tips on motivation and patience, plain-language ` +
+    `explanations of grammar/vocabulary points so the user can understand and help without needing to be fluent ` +
+    `themselves, and ideas for small encouraging gestures. Keep it conversational, suitable for a mobile chat bubble.`;
+  const messages = history.map(m => ({
+    role: m.from_role === 'ai' ? 'assistant' : 'user',
+    content: m.text,
+  }));
+  return callClaude({ system, messages, maxTokens: 350 });
+}
+
+module.exports = { translateText, checkGrammar, tutorReply, companionCoachReply, LANG_NAMES };
