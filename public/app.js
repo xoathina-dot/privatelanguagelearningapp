@@ -543,10 +543,12 @@
       { id: 'all', label: 'Όλα' },
       { id: 'fav', label: 'Αγαπημένα' },
       { id: 'Personal', label: 'Προσωπικά' },
+      { id: 'Family', label: 'Οικογένεια' },
       { id: 'Everyday', label: 'Καθημερινά' },
       { id: 'Phrases', label: 'Φράσεις' },
+      { id: 'Life', label: 'Γερμανία' },
     ];
-    const catColor = { Personal: 'var(--c-coral)', Everyday: 'var(--color-accent)', Phrases: 'var(--c-lavender)' };
+    const catColor = { Personal: 'var(--c-coral)', Everyday: 'var(--color-accent)', Phrases: 'var(--c-lavender)', Family: 'var(--c-mustard)', Life: 'var(--color-accent-700)' };
     const list = state.vocab.filter(v => {
       if (state.vocabFilter === 'all') return true;
       if (state.vocabFilter === 'fav') return v.fav;
