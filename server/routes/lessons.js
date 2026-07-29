@@ -8,7 +8,14 @@ const DAILY_GOAL_XP = 20;
 const LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
 
 function todayStr() {
-  return new Date().toISOString().slice(0, 10);
+  // Use Europe/Berlin so streak/daily-goal don't flip at UTC midnight.
+  return new Date().toLocaleDateString('sv', { timeZone: 'Europe/Berlin' });
+}
+
+function yesterdayStr() {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return d.toLocaleDateString('sv', { timeZone: 'Europe/Berlin' });
 }
 
 function completedLessonIds(userId) {
@@ -121,7 +128,7 @@ router.post('/:lessonId/complete', requireAuth, (req, res) => {
     if (user.last_active_date === today) {
       newXpToday += found.lesson.xp;
     } else {
-      const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+      const yesterday = yesterdayStr();
       newStreak = user.last_active_date === yesterday ? user.streak + 1 : 1;
       newXpToday = found.lesson.xp;
     }

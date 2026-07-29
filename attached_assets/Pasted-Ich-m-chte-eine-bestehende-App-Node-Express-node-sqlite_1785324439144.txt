@@ -1,0 +1,54 @@
+Ich möchte eine bestehende App (Node/Express + node:sqlite + Vanilla-JS-Frontend) um folgende
+Funktionen erweitern. Bitte NICHT die restliche Architektur verändern (kein Framework-Wechsel,
+keine Umstrukturierung über das Nötige hinaus).
+
+## 1. Eigene Vokabeln hinzufügen (beide Nutzer)
+
+Aktuell kommen alle Vokabeln aus einer festen Liste in server/content.js. Beide Accounts (role
+"learner" und "companion") sollen zusätzlich eigene Vokabeln zur gemeinsamen Liste hinzufügen
+können — sichtbar für beide, unabhängig davon wer sie hinzugefügt hat.
+
+- Neue SQLite-Tabelle `custom_vocab`: id, target_lang, target_text, native_text, note, cat,
+  added_by_user_id, created_at
+- GET /api/vocab: bestehende Logik beibehalten, zusätzlich alle custom_vocab-Einträge für die
+  passende target_lang anhängen. Jeder Eintrag bekommt isCustom:true und addedByName
+  (Anzeigename des Erstellers). IDs müssen eindeutig sein und dürfen nicht mit den bestehenden
+  statischen IDs (de1, de2, ... / el1, el2, ...) kollidieren — Präfix "custom_" + DB-id verwenden.
+- POST /api/vocab/custom: neuer Eintrag ({targetText, nativeText, note, cat}). Validieren:
+  targetText/nativeText nicht leer (trim). target_lang serverseitig bestimmen (bei companion:
+  target_lang des Partners; bei learner: eigene target_lang) — NICHT vom Client übernehmen.
+- DELETE /api/vocab/custom/:id: beide Partner-Accounts dürfen jeden Custom-Eintrag löschen
+  (geteilter Bereich für ein Paar, kein striktes Ownership nötig).
+- Favoriten (Sterne) müssen auch für custom-Einträge funktionieren — vocab_favorites nutzt
+  bereits generische vocab_id-Strings, sollte ohne Änderung passen, bitte kurz verifizieren.
+- Frontend (public/app.js, Vocab-Tab):
+  - Kleiner "+"-Button oben in der Liste öffnet ein einfaches Formular (Zielsprache-Wort,
+    Übersetzung, optionale Notiz, Kategorie-Auswahl inkl. neuer Kategorie "Δικά μας" als Default)
+  - Custom-Einträge kennzeichnen, z.B. "hinzugefügt von {addedByName}"
+  - Lösch-Icon nur bei custom-Einträgen, nicht bei den festen Vokabeln
+  - Neue Kategorie auch in die Filter-Chips aufnehmen
+
+## 2. Zeitzone für Streak/Tagesziel korrigieren
+
+Aktuell wird new Date().toISOString().slice(0,10) für "heute"/"gestern" verwendet — das rechnet
+in UTC, nicht in der tatsächlichen Zeitzone (Deutschland/Griechenland). Das kann den Streak kurz
+vor/nach Mitternacht verfälschen. Bitte in server/routes/lessons.js auf Europe/Berlin als feste
+Zeitzone für die "heute"-Berechnung umstellen.
+
+## 3. Schnellauswahl-Nachrichten für die Companion-Rolle
+
+Im Messages-Tab: für role "companion" ein paar vorgefertigte Aufmunterungs-Chips ergänzen
+(ähnlich den Chips im Tutor-Tab), z.B. "Bravo, weiter so! 💪", "Ich bin stolz auf dich",
+"Lust auf eine kleine Deutsch-Runde heute Abend?". Beim Antippen Text ins Nachrichtenfeld
+übernehmen (nicht sofort senden).
+
+## 4. Fortschritt exportieren (Profil-Tab)
+
+Button "Fortschritt exportieren": lädt für den eingeloggten Account eine JSON-Datei mit Streak,
+XP, abgeschlossenen Lektionen und Vokabel-Favoriten herunter — einfaches manuelles Backup
+zusätzlich zur data/app.db-Datei.
+
+---
+Bitte Struktur/Namenskonventionen bestehender Dateien beibehalten (server/routes/vocab.js,
+server/routes/lessons.js, public/app.js, public/styles.css). Bei Unklarheiten lieber kurz
+nachfragen als zu raten.

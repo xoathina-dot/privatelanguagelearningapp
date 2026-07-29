@@ -12,6 +12,7 @@
     vocabFilter: 'all',
     messages: [],
     messageDraft: '',
+    vocabAddOpen: false,
     checkResult: null,
     checkLoading: false,
     tutorMessages: [],
@@ -512,7 +513,16 @@
     `;
   }
 
+  const COMPANION_CHIPS = [
+    'Bravo, weiter so! 💪',
+    'Ich bin stolz auf dich 🌟',
+    'Lust auf eine kleine Deutsch-Runde heute Abend? 😊',
+    'Du schaffst das! 🎉',
+    'Wie war dein heutiges Üben? ✨',
+  ];
+
   function renderMessages() {
+    const isCompanion = state.user && state.user.role === 'companion';
     return `
       <div class="chat-list">
         ${state.messages.map(m => `
@@ -530,6 +540,11 @@
           <div class="text">${escapeHtml(state.checkResult)}</div>
         </div>
       ` : ''}
+      ${isCompanion ? `
+        <div class="chip-row" style="padding:6px 0 2px">
+          ${COMPANION_CHIPS.map(c => `<button class="chip" data-action="msg-chip" data-text="${escapeHtml(c)}">${escapeHtml(c)}</button>`).join('')}
+        </div>
+      ` : ''}
       <div class="composer">
         <input class="input" id="message-input" placeholder="Γράψε ένα μήνυμα…" value="${escapeHtml(state.messageDraft)}" />
         <button class="btn-check" data-action="check-message">${state.checkLoading ? '…' : 'Έλεγχος'}</button>
@@ -542,21 +557,50 @@
     const filters = [
       { id: 'all', label: 'Όλα' },
       { id: 'fav', label: 'Αγαπημένα' },
+      { id: 'Δικά μας', label: 'Δικά μας' },
       { id: 'Personal', label: 'Προσωπικά' },
       { id: 'Family', label: 'Οικογένεια' },
       { id: 'Everyday', label: 'Καθημερινά' },
       { id: 'Phrases', label: 'Φράσεις' },
       { id: 'Life', label: 'Γερμανία' },
     ];
-    const catColor = { Personal: 'var(--c-coral)', Everyday: 'var(--color-accent)', Phrases: 'var(--c-lavender)', Family: 'var(--c-mustard)', Life: 'var(--color-accent-700)' };
+    const catColor = {
+      Personal: 'var(--c-coral)', Everyday: 'var(--color-accent)',
+      Phrases: 'var(--c-lavender)', Family: 'var(--c-mustard)',
+      Life: 'var(--color-accent-700)', 'Δικά μας': 'var(--c-lavender)',
+    };
     const list = state.vocab.filter(v => {
       if (state.vocabFilter === 'all') return true;
       if (state.vocabFilter === 'fav') return v.fav;
       return v.cat === state.vocabFilter;
     });
     return `
-      ${state.vocabMeta && state.vocabMeta.isCompanionView && state.vocabMeta.learnerDisplayName ? `
-        <div class="section-row" style="margin-bottom:8px"><h6>Λεξιλόγιο: ${escapeHtml(state.vocabMeta.learnerDisplayName)}</h6></div>
+      <div class="section-row" style="margin-bottom:4px">
+        ${state.vocabMeta && state.vocabMeta.isCompanionView && state.vocabMeta.learnerDisplayName
+          ? `<h6>Λεξιλόγιο: ${escapeHtml(state.vocabMeta.learnerDisplayName)}</h6>`
+          : '<h6>Λεξιλόγιο</h6>'}
+        <button class="chip" style="padding:4px 12px;font-size:13px" data-action="vocab-add-open">+ Neu</button>
+      </div>
+      ${state.vocabAddOpen ? `
+        <div class="card" style="margin-bottom:12px;padding:14px">
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <input class="input" id="vocab-input-target" placeholder="Zielsprache-Wort (z.B. das Haus)" />
+            <input class="input" id="vocab-input-native" placeholder="Übersetzung / Μετάφραση" />
+            <input class="input" id="vocab-input-note" placeholder="Notiz (optional)" />
+            <select class="input" id="vocab-input-cat">
+              <option value="Δικά μας">Δικά μας (Standard)</option>
+              <option value="Personal">Προσωπικά</option>
+              <option value="Family">Οικογένεια</option>
+              <option value="Everyday">Καθημερινά</option>
+              <option value="Phrases">Φράσεις</option>
+              <option value="Life">Γερμανία</option>
+            </select>
+            <div style="display:flex;gap:8px">
+              <button class="btn-primary" style="flex:1;padding:10px 0" data-action="vocab-add-submit">Speichern</button>
+              <button class="btn-cancel" data-action="vocab-add-cancel">✕</button>
+            </div>
+          </div>
+        </div>
       ` : ''}
       <div class="chip-row">
         ${filters.map(f => `
@@ -570,9 +614,12 @@
             <div class="vocab-body">
               <div class="vocab-target">${escapeHtml(v.target)}</div>
               <div class="vocab-native">${escapeHtml(v.native)}</div>
-              <div class="vocab-note">${escapeHtml(v.note)}</div>
+              <div class="vocab-note">${escapeHtml(v.note)}${v.isCustom && v.addedByName ? (v.note ? ' · ' : '') + '+ ' + escapeHtml(v.addedByName) : ''}</div>
             </div>
-            <button class="star-btn" data-action="toggle-fav" data-id="${v.id}" style="background:${v.fav ? 'var(--c-mustard)' : 'color-mix(in srgb, var(--color-text) 6%, transparent)'};color:${v.fav ? '#fff' : 'var(--c-muted)'}">★</button>
+            <div style="display:flex;flex-direction:column;gap:4px;align-items:center">
+              <button class="star-btn" data-action="toggle-fav" data-id="${v.id}" style="background:${v.fav ? 'var(--c-mustard)' : 'color-mix(in srgb, var(--color-text) 6%, transparent)'};color:${v.fav ? '#fff' : 'var(--c-muted)'}">★</button>
+              ${v.isCustom ? `<button class="trash-btn" data-action="vocab-delete" data-id="${v.id.replace('custom_', '')}">✕</button>` : ''}
+            </div>
           </div>
         `).join('')}
         ${!list.length ? '<div class="empty-state">Keine Einträge in diesem Filter.</div>' : ''}
@@ -607,6 +654,7 @@
           <button class="toggle ${p.notificationsEnabled ? 'on' : ''}" data-action="toggle-notifications"><span class="knob"></span></button>
         </div>
       </div>
+      <button class="btn-export" data-action="export-progress">Fortschritt exportieren ↓</button>
       <button class="btn-logout" data-action="logout">Abmelden</button>
     `;
   }
@@ -683,6 +731,8 @@
       messageInput.focus();
       messageInput.setSelectionRange(messageInput.value.length, messageInput.value.length);
     }
+    const vocabTarget = document.getElementById('vocab-input-target');
+    if (vocabTarget) vocabTarget.focus();
   }
 
   function handleAction(action, el) {
@@ -696,6 +746,10 @@
       case 'quiz-next': return quizNext();
       case 'toggle-fav': return toggleVocabFav(el.getAttribute('data-id'));
       case 'vocab-filter': return setVocabFilter(el.getAttribute('data-filter'));
+      case 'vocab-add-open': { state.vocabAddOpen = true; render(); return; }
+      case 'vocab-add-cancel': { state.vocabAddOpen = false; render(); return; }
+      case 'vocab-add-submit': return addCustomVocab();
+      case 'vocab-delete': return deleteCustomVocab(el.getAttribute('data-id'));
       case 'translate-msg': {
         const id = Number(el.getAttribute('data-id'));
         const msg = state.messages.find(m => m.id === id);
@@ -704,9 +758,17 @@
       }
       case 'send-message': return sendMessage();
       case 'check-message': return checkMessageDraft();
+      case 'msg-chip': {
+        state.messageDraft = el.getAttribute('data-text');
+        render();
+        const inp = document.getElementById('message-input');
+        if (inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }
+        return;
+      }
       case 'tutor-send': return sendTutorText(state.tutorDraft);
       case 'tutor-chip': return sendTutorText(el.getAttribute('data-text'));
       case 'toggle-notifications': return toggleNotifications();
+      case 'export-progress': return exportProgress();
       case 'logout': return logout();
       default: return;
     }
@@ -716,6 +778,43 @@
     const result = await api('/profile/toggle-notifications', { method: 'POST' });
     state.profile.notificationsEnabled = result.notificationsEnabled;
     render();
+  }
+
+  async function addCustomVocab() {
+    const target = (document.getElementById('vocab-input-target')?.value || '').trim();
+    const native = (document.getElementById('vocab-input-native')?.value || '').trim();
+    if (!target || !native) return;
+    const note = (document.getElementById('vocab-input-note')?.value || '').trim();
+    const cat = document.getElementById('vocab-input-cat')?.value || 'Δικά μας';
+    try {
+      await api('/vocab/custom', { method: 'POST', body: { targetText: target, nativeText: native, note, cat } });
+      state.vocabAddOpen = false;
+      await loadVocab();
+      render();
+    } catch (e) { console.error(e); }
+  }
+
+  async function deleteCustomVocab(id) {
+    try {
+      await api('/vocab/custom/' + encodeURIComponent(id), { method: 'DELETE' });
+      await loadVocab();
+      render();
+    } catch (e) { console.error(e); }
+  }
+
+  async function exportProgress() {
+    try {
+      const data = await api('/profile/export');
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'fortschritt-' + (state.user ? state.user.username : 'export') + '.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e) { console.error(e); }
   }
 
   if ('serviceWorker' in navigator) {

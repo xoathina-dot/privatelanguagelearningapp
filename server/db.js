@@ -65,4 +65,18 @@ if (!userColumns.some(c => c.name === 'role')) {
   db.exec("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'learner'");
 }
 
+// Migration: custom vocab table.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS custom_vocab (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    target_lang TEXT NOT NULL,
+    target_text TEXT NOT NULL,
+    native_text TEXT NOT NULL,
+    note TEXT NOT NULL DEFAULT '',
+    cat TEXT NOT NULL DEFAULT 'Δικά μας',
+    added_by_user_id INTEGER NOT NULL,
+    created_at TEXT NOT NULL
+  );
+`);
+
 module.exports = db;

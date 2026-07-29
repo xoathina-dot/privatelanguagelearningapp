@@ -48,4 +48,21 @@ router.post('/toggle-notifications', requireAuth, (req, res) => {
   res.json({ notificationsEnabled: !!newVal });
 });
 
+router.get('/export', requireAuth, (req, res) => {
+  const user = req.user;
+  const completedLessons = db.prepare(
+    'SELECT lesson_id, completed_at FROM lesson_progress WHERE user_id = ? ORDER BY completed_at ASC'
+  ).all(user.id);
+  const favVocab = db.prepare('SELECT vocab_id FROM vocab_favorites WHERE user_id = ?').all(user.id);
+  res.json({
+    exportedAt: new Date().toISOString(),
+    displayName: user.display_name,
+    username: user.username,
+    streak: user.streak,
+    xp: user.xp,
+    completedLessons: completedLessons.map(r => ({ lessonId: r.lesson_id, completedAt: r.completed_at })),
+    vocabFavorites: favVocab.map(r => r.vocab_id),
+  });
+});
+
 module.exports = { router };
