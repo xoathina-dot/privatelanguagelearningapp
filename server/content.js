@@ -364,8 +364,56 @@ const COMPANION_CHIPS = [
   'Erkläre mir kurz seine/ihre aktuelle Lektion',
 ];
 
+// Merges static course data with any custom units/lessons stored in the DB.
+// Uses a lazy require so content.js can be loaded before the DB is ready (e.g. in tests).
+function mergeCustomContent(base, targetLang) {
+  const db = require('./db'); // cached after first call
+
+  // Clone units shallowly so we never mutate COURSES.
+  const units = base.units.map(u => ({ ...u, lessons: [...u.lessons] }));
+
+  const customLessons = db.prepare(
+    'SELECT * FROM custom_lessons WHERE target_lang = ? ORDER BY created_at ASC'
+  ).all(targetLang);
+
+  const customUnits = db.prepare(
+    'SELECT * FROM custom_units WHERE target_lang = ? ORDER BY created_at ASC'
+  ).all(targetLang);
+
+  // Append custom lessons that belong to existing static units.
+  for (const cl of customLessons) {
+    if (cl.unit_id.startsWith('customunit_')) continue; // handled with custom units below
+    const unit = units.find(u => u.id === cl.unit_id);
+    if (!unit) continue;
+    let quiz;
+    try { quiz = JSON.parse(cl.quiz_json); } catch (e) { quiz = []; }
+    unit.lessons.push({ id: `custom_${cl.id}`, title: cl.title, sub: cl.sub, xp: cl.xp, quiz, isCustom: true });
+  }
+
+  // Append custom units (with their own lessons) at the end of the list.
+  for (const cu of customUnits) {
+    const unitId = `customunit_${cu.id}`;
+    const lessons = customLessons
+      .filter(cl => cl.unit_id === unitId)
+      .map(cl => {
+        let quiz;
+        try { quiz = JSON.parse(cl.quiz_json); } catch (e) { quiz = []; }
+        return { id: `custom_${cl.id}`, title: cl.title, sub: cl.sub, xp: cl.xp, quiz, isCustom: true };
+      });
+    units.push({ id: unitId, title: cu.title, sub: cu.sub, level: cu.level, isCustom: true, lessons });
+  }
+
+  return { ...base, units };
+}
+
 function getCourse(targetLang) {
-  return COURSES[targetLang] || COURSES.de;
+  const base = COURSES[targetLang] || COURSES.de;
+  try {
+    return mergeCustomContent(base, targetLang);
+  } catch (e) {
+    // Graceful fallback if DB is unavailable (early startup / tests).
+    return base;
+  }
 }
 
 // Returns the review lesson slots for a course — one after every 3rd unit.

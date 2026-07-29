@@ -13,6 +13,10 @@
     messages: [],
     messageDraft: '',
     vocabAddOpen: false,
+    contentImportType: 'lesson',
+    contentImportJson: '',
+    contentImportStatus: null,
+    contentImportLoading: false,
     checkResult: null,
     checkLoading: false,
     tutorMessages: [],
@@ -700,6 +704,25 @@
           <button class="toggle ${p.notificationsEnabled ? 'on' : ''}" data-action="toggle-notifications"><span class="knob"></span></button>
         </div>
       </div>
+      <div class="profile-section-label">Content hinzufügen</div>
+      <div class="import-section">
+        <div class="import-type-row">
+          <label class="import-type-label ${state.contentImportType === 'lesson' ? 'selected' : ''}">
+            <input type="radio" name="importtype" value="lesson" ${state.contentImportType === 'lesson' ? 'checked' : ''}> Lektion
+          </label>
+          <label class="import-type-label ${state.contentImportType === 'unit' ? 'selected' : ''}">
+            <input type="radio" name="importtype" value="unit" ${state.contentImportType === 'unit' ? 'checked' : ''}> Neue Einheit
+          </label>
+        </div>
+        <div class="import-hint">${state.contentImportType === 'lesson'
+          ? '{ "unitId": "u5", "title": "…", "sub": "…", "xp": 15, "quiz": [{"prompt":"…","translation":"…","answer":"…","options":["…","…"]}] }'
+          : '{ "title": "…", "sub": "…", "level": "A1", "lessons": [{"title":"…","sub":"…","xp":15,"quiz":[{"prompt":"…","translation":"…","answer":"…","options":["…","…"]}]}] }'
+        }</div>
+        <textarea class="input import-textarea" id="import-json" placeholder="JSON hier einfügen…" spellcheck="false">${escapeHtml(state.contentImportJson)}</textarea>
+        ${state.contentImportStatus?.error ? `<div class="import-status import-error">${escapeHtml(state.contentImportStatus.error)}</div>` : ''}
+        ${state.contentImportStatus?.ok ? `<div class="import-status import-ok">✓ Erfolgreich importiert!</div>` : ''}
+        <button class="btn-primary" style="width:100%;margin-top:6px;padding:12px" data-action="content-import" ${state.contentImportLoading ? 'disabled' : ''}>${state.contentImportLoading ? '…' : 'Einfügen'}</button>
+      </div>
       <button class="btn-export" data-action="export-progress">Fortschritt exportieren ↓</button>
       <button class="btn-logout" data-action="logout">Abmelden</button>
     `;
@@ -840,6 +863,18 @@
     const vocabTarget = document.getElementById('vocab-input-target');
     if (vocabTarget) vocabTarget.focus();
 
+    // Content import: radio buttons + textarea.
+    root.querySelectorAll('input[name="importtype"]').forEach(r => {
+      r.addEventListener('change', (e) => {
+        state.contentImportType = e.target.value;
+        state.contentImportJson = '';
+        state.contentImportStatus = null;
+        render();
+      });
+    });
+    const importTA = document.getElementById('import-json');
+    if (importTA) importTA.addEventListener('input', (e) => { state.contentImportJson = e.target.value; });
+
     // Block A: fire confetti + XP count-up exactly once when result screen appears.
     if (state.quiz?.done && !state.quiz.animationPlayed) {
       state.quiz.animationPlayed = true;
@@ -943,6 +978,7 @@
       case 'tutor-send': return sendTutorText(state.tutorDraft);
       case 'tutor-chip': return sendTutorText(el.getAttribute('data-text'));
       case 'toggle-notifications': return toggleNotifications();
+      case 'content-import': return importContent();
       case 'export-progress': return exportProgress();
       case 'logout': return logout();
       default: return;
@@ -975,6 +1011,36 @@
       await loadVocab();
       render();
     } catch (e) { console.error(e); }
+  }
+
+  async function importContent() {
+    const json = (document.getElementById('import-json')?.value ?? state.contentImportJson).trim();
+    if (!json) {
+      state.contentImportStatus = { error: 'Bitte JSON einfügen.' };
+      render(); return;
+    }
+    let data;
+    try { data = JSON.parse(json); }
+    catch (e) {
+      state.contentImportStatus = { error: 'Ungültiges JSON: ' + e.message };
+      render(); return;
+    }
+    state.contentImportLoading = true;
+    state.contentImportStatus = null;
+    render();
+    try {
+      await api('/content/import', { method: 'POST', body: { type: state.contentImportType, data } });
+      state.contentImportStatus = { ok: true };
+      state.contentImportJson = '';
+      state.contentImportLoading = false;
+      // Invalidate lessons cache so next tab-switch reloads the updated list.
+      state.lessons = null;
+      render();
+    } catch (e) {
+      state.contentImportStatus = { error: e.message };
+      state.contentImportLoading = false;
+      render();
+    }
   }
 
   async function exportProgress() {

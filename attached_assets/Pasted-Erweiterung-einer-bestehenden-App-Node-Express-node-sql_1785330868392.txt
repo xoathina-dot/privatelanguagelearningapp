@@ -1,0 +1,80 @@
+Erweiterung einer bestehenden App (Node/Express + node:sqlite + Vanilla-JS-Frontend). Bitte NICHT
+die restliche Architektur verändern. Beide Accounts (role "learner" und "companion") sollen
+eigene Lektionen/Einheiten per JSON-Paste hinzufügen können, die dann wie eingebauter Content
+behandelt werden (Fortschritt, XP, Quiz — alles wie gehabt).
+
+## 1. Datenbank
+
+Zwei neue Tabellen:
+- custom_units: id (auto), target_lang, title, sub, level, created_at
+- custom_lessons: id (auto), target_lang, unit_id (Text — entweder die id einer bestehenden
+  Einheit aus content.js, z.B. "u5", ODER die id einer custom_unit als "customunit_<id>"),
+  title, sub, xp, quiz_json (TEXT, JSON-Array der Quiz-Fragen), created_at
+
+## 2. server/content.js erweitern
+
+- Neue Funktion, die beim Aufbau von getCourse()/getAllLessonsFlat()/findLesson() zusätzlich zu
+  den statischen COURSES-Daten auch die custom_units/custom_lessons aus der DB für die passende
+  target_lang lädt und anhängt:
+  - custom_lessons mit bestehender unit_id werden ans Ende der jeweiligen Einheit angehängt
+    (nach den eingebauten Lektionen, sortiert nach created_at)
+  - custom_units werden als zusätzliche Einheiten ans Ende der units-Liste angehängt
+  - Lektions-IDs von custom_lessons bekommen automatisch das Präfix "custom_" + DB-id, damit sie
+    nie mit bestehenden IDs kollidieren
+- Bestehende Funktionssignaturen NICHT ändern — die Erweiterung muss transparent für
+  lessons.js/vocab.js/tutor.js funktionieren, die bereits getCourse() etc. nutzen
+
+## 3. Neuer Endpoint: POST /api/content/import
+
+Body: { type: "lesson" | "unit", data: {...} }
+
+Erwartetes JSON-Schema, das der Client schickt:
+
+Für type "lesson" (an bestehende Einheit anhängen):
+{
+  "unitId": "u5",
+  "title": "...",
+  "sub": "...",
+  "xp": 15,
+  "quiz": [
+    { "prompt": "...", "translation": "...", "answer": "...", "options": ["...", "...", "..."] }
+  ]
+}
+
+Für type "unit" (komplett neue Einheit mit Lektionen):
+{
+  "title": "...",
+  "sub": "...",
+  "level": "A1",
+  "lessons": [
+    { "title": "...", "sub": "...", "xp": 15, "quiz": [ { "prompt": "...", "translation": "...",
+      "answer": "...", "options": ["...", "...", "..."] } ] }
+  ]
+}
+
+Server-seitige Validierung vor dem Speichern (bei Fehler: 400 mit klarer, konkreter
+Fehlermeldung, welches Feld fehlt/falsch ist):
+- title/sub/xp Pflichtfelder, xp ist eine Zahl
+- jede Quiz-Frage braucht prompt, translation, answer, options (Array mit mind. 2 Einträgen)
+- answer MUSS exakt einem Eintrag in options entsprechen
+- bei type "lesson": unitId muss zu einer existierenden Einheit (eingebaut oder custom) in der
+  jeweiligen target_lang passen, sonst Fehler
+
+target_lang wird NICHT vom Client übernommen, sondern serverseitig bestimmt: bei role
+"companion" die target_lang des verknüpften Partners, bei role "learner" die eigene target_lang
+(gleiche Logik wie in server/routes/lessons.js effectiveLearner() bereits vorhanden — bitte
+wiederverwenden statt neu schreiben).
+
+## 4. Frontend (public/app.js)
+
+- Im Profile-Tab einen neuen Abschnitt "Content hinzufügen" mit:
+  - Auswahl (Radio/Select): "Lektion zu bestehender Einheit" oder "Neue Einheit"
+  - Ein großes Textfeld (textarea) für das JSON
+  - Button "Einfügen" — sendet an POST /api/content/import
+  - Bei Erfolg: kurze Bestätigung + Textfeld leeren
+  - Bei Fehler: die vom Server zurückgegebene Fehlermeldung direkt anzeigen (nicht nur "Fehler")
+- Nach erfolgreichem Import: Lessons-Tab beim nächsten Aufruf soll die neue Lektion/Einheit
+  automatisch zeigen (kein Extra-Reload-Mechanismus nötig, da /api/lessons eh bei jedem
+  Tab-Wechsel neu geladen wird)
+
+Bitte bei Unklarheiten nachfragen statt zu raten.
