@@ -27,6 +27,9 @@ async function callClaude({ system, messages, maxTokens = 400 }) {
     throw new Error(`Anthropic API error ${res.status}: ${errText}`);
   }
   const data = await res.json();
+  if (data.stop_reason === 'max_tokens') {
+    console.warn('Anthropic API response was cut off at max_tokens — consider raising the limit further.');
+  }
   const textBlock = (data.content || []).find(b => b.type === 'text');
   return textBlock ? textBlock.text.trim() : '';
 }
@@ -38,7 +41,7 @@ async function translateText(text, toLang) {
   return callClaude({
     system,
     messages: [{ role: 'user', content: text }],
-    maxTokens: 200,
+    maxTokens: 300,
   });
 }
 
@@ -51,7 +54,7 @@ async function checkGrammar(text, targetLang) {
   return callClaude({
     system,
     messages: [{ role: 'user', content: text }],
-    maxTokens: 150,
+    maxTokens: 300,
   });
 }
 
@@ -67,7 +70,7 @@ async function tutorReply(history, targetLang, nativeLang) {
     role: m.from_role === 'ai' ? 'assistant' : 'user',
     content: m.text,
   }));
-  return callClaude({ system, messages, maxTokens: 350 });
+  return callClaude({ system, messages, maxTokens: 800 });
 }
 
 async function companionCoachReply(history, partnerName, partnerTargetLang, currentLessonInfo) {
@@ -87,7 +90,7 @@ async function companionCoachReply(history, partnerName, partnerTargetLang, curr
     role: m.from_role === 'ai' ? 'assistant' : 'user',
     content: m.text,
   }));
-  return callClaude({ system, messages, maxTokens: 350 });
+  return callClaude({ system, messages, maxTokens: 800 });
 }
 
 module.exports = { translateText, checkGrammar, tutorReply, companionCoachReply, LANG_NAMES };

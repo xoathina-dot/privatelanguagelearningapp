@@ -1,7 +1,7 @@
 const express = require('express');
 const db = require('../db');
 const { requireAuth, getUserById } = require('../auth');
-const { getCourse, getAllLessonsFlat, findLesson } = require('../content');
+const { getCourse, getAllLessonsFlat, findLesson, getReviewSlots, getReviewQuestionPool } = require('../content');
 
 const router = express.Router();
 const DAILY_GOAL_XP = 20;
@@ -34,23 +34,60 @@ function effectiveLearner(user) {
 
 function buildUnitsWithState(learner) {
   const course = getCourse(learner.target_lang);
+  // Only regular (non-review) lessons determine the main unlock chain.
   const flat = getAllLessonsFlat(learner.target_lang);
   const done = completedLessonIds(learner.id);
   const firstNotDoneIndex = flat.findIndex(l => !done.has(l.id));
 
-  return course.units.map(unit => ({
-    id: unit.id,
-    title: unit.title,
-    sub: unit.sub,
-    level: unit.level,
-    lessons: unit.lessons.map(lesson => {
-      const flatIdx = flat.findIndex(l => l.id === lesson.id);
-      const state = done.has(lesson.id)
-        ? 'done'
-        : (firstNotDoneIndex === flatIdx ? 'current' : 'locked');
-      return { id: lesson.id, title: lesson.title, sub: lesson.sub, xp: lesson.xp, state };
-    }),
-  }));
+  const reviewSlots = getReviewSlots(learner.target_lang);
+  const result = [];
+
+  course.units.forEach((unit, unitIdx) => {
+    // Regular unit
+    result.push({
+      id: unit.id,
+      title: unit.title,
+      sub: unit.sub,
+      level: unit.level,
+      isReview: false,
+      lessons: unit.lessons.map(lesson => {
+        const flatIdx = flat.findIndex(l => l.id === lesson.id);
+        const lessonState = done.has(lesson.id)
+          ? 'done'
+          : (firstNotDoneIndex === flatIdx ? 'current' : 'locked');
+        return { id: lesson.id, title: lesson.title, sub: lesson.sub, xp: lesson.xp, state: lessonState, isReview: false };
+      }),
+    });
+
+    // Inject review lesson after this unit if a slot exists.
+    // Review lessons do NOT affect the main unlock chain for regular lessons.
+    const slot = reviewSlots.find(s => s.afterUnitIndex === unitIdx);
+    if (slot) {
+      // Available only once all covered units' regular lessons are done.
+      const allCoveredDone = slot.coveredUnitIds.every(uid => {
+        const u = course.units.find(u2 => u2.id === uid);
+        return u && u.lessons.every(l => done.has(l.id));
+      });
+      const reviewState = done.has(slot.id) ? 'done' : (allCoveredDone ? 'current' : 'locked');
+      result.push({
+        id: slot.id,
+        title: slot.title,
+        sub: slot.sub,
+        level: '★',
+        isReview: true,
+        lessons: [{
+          id: slot.id,
+          title: slot.title,
+          sub: slot.sub,
+          xp: slot.xp,
+          state: reviewState,
+          isReview: true,
+        }],
+      });
+    }
+  });
+
+  return result;
 }
 
 function currentLevelInfo(learner) {
@@ -112,8 +149,14 @@ router.post('/:lessonId/complete', requireAuth, (req, res) => {
   }
   const user = req.user;
   const { lessonId } = req.params;
-  const found = findLesson(user.target_lang, lessonId);
-  if (!found) return res.status(404).json({ error: 'lesson_not_found' });
+
+  // Support review lessons in addition to regular lessons.
+  let found = findLesson(user.target_lang, lessonId);
+  if (!found) {
+    const slot = getReviewSlots(user.target_lang).find(s => s.id === lessonId);
+    if (!slot) return res.status(404).json({ error: 'lesson_not_found' });
+    found = { lesson: { xp: slot.xp, title: slot.title }, unit: { title: 'Wiederholung' } };
+  }
 
   const already = db.prepare('SELECT 1 FROM lesson_progress WHERE user_id = ? AND lesson_id = ?').get(user.id, lessonId);
   const today = todayStr();
@@ -157,6 +200,18 @@ router.get('/:lessonId/quiz', requireAuth, (req, res) => {
   if (req.user.role === 'companion') {
     return res.status(403).json({ error: 'companion_read_only' });
   }
+
+  // Check for review lesson first.
+  const reviewSlots = getReviewSlots(req.user.target_lang);
+  const slot = reviewSlots.find(s => s.id === req.params.lessonId);
+  if (slot) {
+    const pool = getReviewQuestionPool(req.user.target_lang, slot.coveredUnitIds);
+    // Pick 5 questions at random — pool grows as more units are covered.
+    const shuffled = [...pool].sort(() => Math.random() - 0.5);
+    const quiz = shuffled.slice(0, Math.min(5, shuffled.length));
+    return res.json({ lessonTitle: slot.title, unitTitle: 'Wiederholung', quiz, xp: slot.xp, isReview: true });
+  }
+
   const found = findLesson(req.user.target_lang, req.params.lessonId);
   if (!found) return res.status(404).json({ error: 'lesson_not_found' });
   res.json({ lessonTitle: found.lesson.title, unitTitle: found.unit.title, quiz: found.lesson.quiz, xp: found.lesson.xp });

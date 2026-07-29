@@ -197,22 +197,51 @@
   }
 
   // ---------- Actions ----------
+  function shuffle(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function getLang() {
+    const tl = state.user?.target_lang || 'de';
+    return tl === 'de' ? 'de-DE' : 'el-GR';
+  }
+
+  function speakListening(text, lang) {
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const utt = new SpeechSynthesisUtterance(text);
+    utt.lang = lang;
+    utt.rate = 0.88;
+    window.speechSynthesis.speak(utt);
+  }
+
   async function openLesson(lessonId) {
     try {
       const data = await api('/lessons/' + encodeURIComponent(lessonId) + '/quiz');
+      const firstQ = data.quiz[0];
       state.quiz = {
         lessonId,
         unitTitle: data.unitTitle,
         lessonTitle: data.lessonTitle,
         xp: data.xp,
+        isReview: !!data.isReview,
         questions: data.quiz,
         index: 0,
         selected: null,
         correctCount: 0,
         done: false,
         earnedXp: 0,
+        animationPlayed: false,
+        wordOrderAnswer: [],
+        wordOrderBank: firstQ?.type === 'word-order' ? shuffle(firstQ.words) : [],
       };
       render();
+      if (firstQ?.type === 'listening') speakListening(firstQ.prompt, getLang());
     } catch (e) { console.error(e); }
   }
 
@@ -241,13 +270,25 @@
         });
         state.lessons = { units: result.units, streak: result.streak, xp: result.xp, level: result.level, dailyGoalPct: result.dailyGoalPct, dailyGoalLabel: result.dailyGoalLabel };
         q.done = true;
+        q.animationPlayed = false;
         q.earnedXp = result.xpEarned || q.xp;
       } catch (e) { console.error(e); }
     } else {
       q.index += 1;
       q.selected = null;
+      const nextQ = q.questions[q.index];
+      if (nextQ?.type === 'word-order') {
+        q.wordOrderAnswer = [];
+        q.wordOrderBank = shuffle(nextQ.words);
+      } else {
+        q.wordOrderAnswer = [];
+        q.wordOrderBank = [];
+      }
     }
     render();
+    // Auto-speak listening questions when advancing to them.
+    const curQ = state.quiz?.questions[state.quiz?.index];
+    if (!state.quiz?.done && curQ?.type === 'listening') speakListening(curQ.prompt, getLang());
   }
 
   async function toggleVocabFav(vocabId) {
@@ -454,21 +495,24 @@
       ? `<div class="section-row" style="margin-bottom:8px"><h6>Η πρόοδος του/της ${escapeHtml(state.lessons.learnerDisplayName)}</h6></div>`
       : '';
     return heading + state.lessons.units.map(unit => `
-      <div class="unit-block">
+      <div class="unit-block ${unit.isReview ? 'unit-block-review' : ''}">
         <div class="unit-head">
           <div>
-            <div class="unit-title">${escapeHtml(unit.title)}</div>
+            <div class="unit-title">${unit.isReview ? '↺ ' : ''}${escapeHtml(unit.title)}</div>
             <div class="unit-sub">${escapeHtml(unit.sub)}</div>
           </div>
-          <span class="unit-level">${escapeHtml(unit.level)}</span>
+          <span class="unit-level ${unit.isReview ? 'unit-level-review' : ''}">${escapeHtml(unit.level)}</span>
         </div>
         <div class="lesson-list">
           ${unit.lessons.map(lesson => {
-            const dotContent = lesson.state === 'done' ? '✓' : lesson.state === 'current' ? '▸' : '•';
+            const isReview = !!lesson.isReview;
+            const dotContent = isReview
+              ? (lesson.state === 'done' ? '✓' : '↺')
+              : (lesson.state === 'done' ? '✓' : lesson.state === 'current' ? '▸' : '•');
             const dotClass = lesson.state === 'done'
               ? 'background:color-mix(in srgb, var(--color-accent) 18%, transparent);color:var(--color-accent-700)'
               : lesson.state === 'current'
-                ? 'background:var(--color-accent);color:#fff'
+                ? (isReview ? 'background:var(--c-lavender);color:#fff' : 'background:var(--color-accent);color:#fff')
                 : 'background:color-mix(in srgb, var(--color-text) 8%, transparent);color:var(--c-muted)';
             const clickable = !isCompanion && (lesson.state === 'done' || lesson.state === 'current');
             return `
@@ -478,7 +522,9 @@
                   <div class="lesson-title">${escapeHtml(lesson.title)}</div>
                   <div class="lesson-sub">${escapeHtml(lesson.sub)}</div>
                 </div>
-                <span class="lesson-tag">+${lesson.xp} XP</span>
+                ${isReview
+                  ? `<span class="lesson-tag lesson-tag-review">↺ Wiederholung</span>`
+                  : `<span class="lesson-tag">+${lesson.xp} XP</span>`}
               </button>
             `;
           }).join('')}
@@ -665,8 +711,10 @@
       return `
         <div class="quiz-overlay">
           <div class="quiz-result">
-            <div class="quiz-result-xp">+${q.earnedXp} XP</div>
-            <div class="quiz-result-title">Μπράβο!</div>
+            <div id="confetti-wrap"></div>
+            <div class="mascot-slot"><!-- MASCOT_PLACEHOLDER --></div>
+            <div class="quiz-result-xp">+<span id="xp-count">0</span> XP</div>
+            <div class="quiz-result-title">Μπράβο! 🎉</div>
             <div class="quiz-result-sub">Ολοκλήρωσες: ${escapeHtml(q.lessonTitle)} — ${q.correctCount}/${q.questions.length} σωστά</div>
             <button class="btn-cta" style="width:auto;padding:12px 22px" data-action="close-quiz">Συνέχεια</button>
           </div>
@@ -674,8 +722,84 @@
       `;
     }
     const question = q.questions[q.index];
+    const type = question.type || 'multiple-choice';
     const progressPct = Math.round(((q.index + (q.selected ? 1 : 0)) / q.questions.length) * 100);
-    const isCorrectSelected = q.selected === question.answer;
+
+    // Shared feedback block (used by all types once answered).
+    const isCorrect = type === 'word-order'
+      ? q.selected === '__correct__'
+      : q.selected === question.answer;
+    const feedbackBlock = q.selected ? `
+      <div class="quiz-feedback">
+        <div class="quiz-feedback-title" style="color:${isCorrect ? 'var(--color-accent)' : 'var(--color-text)'}">
+          ${isCorrect ? '✓ Σωστά! Nice!' : (type === 'word-order'
+            ? `△ Σχεδόν — ${escapeHtml(question.correctOrder.join(' '))}`
+            : '△ Σχεδόν — δες τη σωστή απάντηση')}
+        </div>
+        <div class="quiz-feedback-sub">${escapeHtml(question.translation)}</div>
+        <button class="btn-cta" data-action="quiz-next">${q.index + 1 >= q.questions.length ? 'Ολοκλήρωση' : 'Επόμενο'}</button>
+      </div>
+    ` : '';
+
+    let questionBody = '';
+
+    if (type === 'word-order') {
+      questionBody = `
+        <div class="quiz-instruction">Τοποθέτησε τις λέξεις στη σωστή σειρά / Ordne die Wörter</div>
+        <div class="quiz-prompt">${escapeHtml(question.prompt)}</div>
+        <div class="wo-answer-area ${q.selected ? (isCorrect ? 'wo-correct' : 'wo-wrong') : ''}">
+          ${q.wordOrderAnswer.map((w, i) => `
+            <button class="wo-tile wo-placed" data-action="wo-tap-answer" data-idx="${i}" ${q.selected ? 'disabled' : ''}>${escapeHtml(w)}</button>
+          `).join('')}
+          ${!q.wordOrderAnswer.length ? `<span class="wo-placeholder">Tippe die Wörter an…</span>` : ''}
+        </div>
+        <div class="wo-bank">
+          ${q.wordOrderBank.map((w, i) => `
+            <button class="wo-tile" data-action="wo-tap-bank" data-idx="${i}" ${q.selected ? 'disabled' : ''}>${escapeHtml(w)}</button>
+          `).join('')}
+        </div>
+        ${!q.selected && q.wordOrderAnswer.length > 0 ? `
+          <button class="btn-cta" data-action="wo-submit" style="margin-top:8px">Prüfen ✓</button>
+        ` : ''}
+        ${feedbackBlock}
+      `;
+    } else if (type === 'listening') {
+      questionBody = `
+        <div class="quiz-instruction">Άκουσε και επίλεξε / Höre zu und wähle</div>
+        <div class="quiz-listen-wrap">
+          <button class="btn-listen" data-action="listen-replay">🔊 Ξανάκουσε / Nochmal</button>
+        </div>
+        <div class="quiz-options">
+          ${question.options.map(opt => {
+            let cls = '';
+            if (q.selected) {
+              if (opt === question.answer) cls = 'correct';
+              else if (opt === q.selected) cls = 'wrong';
+            }
+            return `<button class="quiz-option ${cls}" data-action="quiz-answer" data-opt="${escapeHtml(opt)}" ${q.selected ? 'disabled' : ''}>${escapeHtml(opt)}</button>`;
+          }).join('')}
+        </div>
+        ${feedbackBlock}
+      `;
+    } else {
+      // Default: multiple-choice
+      questionBody = `
+        <div class="quiz-instruction">Μετάφρασε στα γερμανικά / Übersetze</div>
+        <div class="quiz-prompt">${escapeHtml(question.prompt)}</div>
+        <div class="quiz-options">
+          ${question.options.map(opt => {
+            let cls = '';
+            if (q.selected) {
+              if (opt === question.answer) cls = 'correct';
+              else if (opt === q.selected) cls = 'wrong';
+            }
+            return `<button class="quiz-option ${cls}" data-action="quiz-answer" data-opt="${escapeHtml(opt)}" ${q.selected ? 'disabled' : ''}>${escapeHtml(opt)}</button>`;
+          }).join('')}
+        </div>
+        ${feedbackBlock}
+      `;
+    }
+
     return `
       <div class="quiz-overlay">
         <div class="quiz-head">
@@ -684,25 +808,7 @@
           <div class="quiz-step-label">${q.index + 1}/${q.questions.length}</div>
         </div>
         <div class="quiz-body">
-          <div class="quiz-instruction">Μετάφρασε στα γερμανικά / Übersetze</div>
-          <div class="quiz-prompt">${escapeHtml(question.prompt)}</div>
-          <div class="quiz-options">
-            ${question.options.map(opt => {
-              let cls = '';
-              if (q.selected) {
-                if (opt === question.answer) cls = 'correct';
-                else if (opt === q.selected) cls = 'wrong';
-              }
-              return `<button class="quiz-option ${cls}" data-action="quiz-answer" data-opt="${escapeHtml(opt)}" ${q.selected ? 'disabled' : ''}>${escapeHtml(opt)}</button>`;
-            }).join('')}
-          </div>
-          ${q.selected ? `
-            <div class="quiz-feedback">
-              <div class="quiz-feedback-title" style="color:${isCorrectSelected ? 'var(--color-accent)' : 'var(--color-text)'}">${isCorrectSelected ? '✓ Σωστά! Nice!' : '△ Σχεδόν — δες τη σωστή απάντηση'}</div>
-              <div class="quiz-feedback-sub">${escapeHtml(question.translation)}</div>
-              <button class="btn-cta" data-action="quiz-next">${q.index + 1 >= q.questions.length ? 'Ολοκλήρωση' : 'Επόμενο'}</button>
-            </div>
-          ` : ''}
+          ${questionBody}
         </div>
       </div>
     `;
@@ -733,6 +839,46 @@
     }
     const vocabTarget = document.getElementById('vocab-input-target');
     if (vocabTarget) vocabTarget.focus();
+
+    // Block A: fire confetti + XP count-up exactly once when result screen appears.
+    if (state.quiz?.done && !state.quiz.animationPlayed) {
+      state.quiz.animationPlayed = true;
+      runConfetti();
+      runXpCountUp(state.quiz.earnedXp);
+    }
+  }
+
+  function runConfetti() {
+    const wrap = document.getElementById('confetti-wrap');
+    if (!wrap) return;
+    const colors = ['var(--color-accent)', 'var(--c-coral)', 'var(--c-lavender)', 'var(--c-mustard)', '#86efac', '#67e8f9'];
+    for (let i = 0; i < 26; i++) {
+      const piece = document.createElement('div');
+      piece.className = 'confetti-piece';
+      piece.style.cssText = [
+        `left:${Math.random() * 100}%`,
+        `background:${colors[i % colors.length]}`,
+        `width:${4 + Math.random() * 7}px`,
+        `height:${4 + Math.random() * 7}px`,
+        `border-radius:${Math.random() > 0.5 ? '50%' : '2px'}`,
+        `animation-delay:${(Math.random() * 0.45).toFixed(2)}s`,
+        `animation-duration:${(0.9 + Math.random() * 0.7).toFixed(2)}s`,
+      ].join(';');
+      wrap.appendChild(piece);
+    }
+  }
+
+  function runXpCountUp(target) {
+    if (!target) return;
+    const el = document.getElementById('xp-count');
+    if (!el) return;
+    let cur = 0;
+    const step = Math.max(1, Math.ceil(target / 20));
+    const timer = setInterval(() => {
+      cur = Math.min(cur + step, target);
+      el.textContent = cur;
+      if (cur >= target) clearInterval(timer);
+    }, 38);
   }
 
   function handleAction(action, el) {
@@ -744,6 +890,35 @@
       case 'close-quiz': return closeQuiz();
       case 'quiz-answer': return selectAnswer(el.getAttribute('data-opt'));
       case 'quiz-next': return quizNext();
+      case 'wo-tap-bank': {
+        const q = state.quiz; if (!q || q.selected) return;
+        const idx = parseInt(el.getAttribute('data-idx'));
+        const word = q.wordOrderBank[idx];
+        q.wordOrderBank = q.wordOrderBank.filter((_, i) => i !== idx);
+        q.wordOrderAnswer = [...q.wordOrderAnswer, word];
+        render(); return;
+      }
+      case 'wo-tap-answer': {
+        const q = state.quiz; if (!q || q.selected) return;
+        const idx = parseInt(el.getAttribute('data-idx'));
+        const word = q.wordOrderAnswer[idx];
+        q.wordOrderAnswer = q.wordOrderAnswer.filter((_, i) => i !== idx);
+        q.wordOrderBank = [...q.wordOrderBank, word];
+        render(); return;
+      }
+      case 'wo-submit': {
+        const q = state.quiz; if (!q || q.selected) return;
+        const answer = q.wordOrderAnswer.join(' ');
+        const correct = answer === q.questions[q.index].correctOrder.join(' ');
+        q.selected = correct ? '__correct__' : '__wrong__';
+        if (correct) q.correctCount++;
+        render(); return;
+      }
+      case 'listen-replay': {
+        const q = state.quiz;
+        if (q) speakListening(q.questions[q.index].prompt, getLang());
+        return;
+      }
       case 'toggle-fav': return toggleVocabFav(el.getAttribute('data-id'));
       case 'vocab-filter': return setVocabFilter(el.getAttribute('data-filter'));
       case 'vocab-add-open': { state.vocabAddOpen = true; render(); return; }

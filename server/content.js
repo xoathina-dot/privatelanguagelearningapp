@@ -19,6 +19,7 @@ const COURSES = {
               { prompt: 'Γεια σου', translation: 'Hello', answer: 'Hallo', options: ['Hallo', 'Tschüss', 'Bitte'] },
               { prompt: 'Καλημέρα', translation: 'Good morning', answer: 'Guten Morgen', options: ['Guten Morgen', 'Gute Nacht', 'Guten Tag'] },
               { prompt: 'Αντίο', translation: 'Goodbye', answer: 'Tschüss', options: ['Tschüss', 'Danke', 'Ja'] },
+              { type: 'listening', prompt: 'Guten Morgen', translation: 'Good morning', answer: 'Καλημέρα', options: ['Καλημέρα', 'Καληνύχτα', 'Αντίο'] },
             ] },
           { id: 'u1l2', title: 'Ναι, όχι, ευχαριστώ', sub: 'Yes, no, thank you', xp: 10,
             quiz: [
@@ -120,6 +121,7 @@ const COURSES = {
               { prompt: 'Σ\' αγαπώ', translation: 'I love you', answer: 'Ich liebe dich', options: ['Ich liebe dich', 'Ich mag dich', 'Ich brauche dich'] },
               { prompt: 'Μου λείπεις', translation: 'I miss you', answer: 'Ich vermisse dich', options: ['Ich vermisse dich', 'Ich mag dich', 'Ich brauche dich'] },
               { prompt: 'αγάπη μου', translation: 'my love / darling', answer: 'mein Schatz', options: ['mein Schatz', 'meine Familie', 'mein Freund'] },
+              { type: 'listening', prompt: 'Ich vermisse dich', translation: 'I miss you', answer: 'Μου λείπεις', options: ['Μου λείπεις', 'Σ\' αγαπώ', 'αγάπη μου'] },
             ] },
           { id: 'u5l3', title: 'Η καθημερινότητά μας', sub: 'Our everyday life', xp: 15,
             quiz: [
@@ -147,6 +149,8 @@ const COURSES = {
             quiz: [
               { prompt: 'Σήμερα μαθαίνω γερμανικά', translation: 'Today I am learning German', answer: 'Heute lerne ich Deutsch', options: ['Heute lerne ich Deutsch', 'Heute ich lerne Deutsch', 'Ich heute lerne Deutsch'] },
               { prompt: 'Αύριο πάμε στο σπίτι', translation: 'Tomorrow we are going home', answer: 'Morgen gehen wir nach Hause', options: ['Morgen gehen wir nach Hause', 'Morgen wir gehen nach Hause', 'Wir morgen gehen nach Hause'] },
+              { type: 'word-order', prompt: 'Σήμερα μαθαίνω γερμανικά', translation: 'Heute lerne ich Deutsch', words: ['Heute', 'ich', 'lerne', 'Deutsch'], correctOrder: ['Heute', 'lerne', 'ich', 'Deutsch'] },
+              { type: 'word-order', prompt: 'Αύριο πάμε στο σπίτι', translation: 'Morgen gehen wir nach Hause', words: ['gehen', 'Morgen', 'wir', 'nach', 'Hause'], correctOrder: ['Morgen', 'gehen', 'wir', 'nach', 'Hause'] },
             ] },
           { id: 'u6l4', title: 'Ερωτηματικές λέξεις', sub: 'Question words', xp: 15,
             quiz: [
@@ -364,6 +368,41 @@ function getCourse(targetLang) {
   return COURSES[targetLang] || COURSES.de;
 }
 
+// Returns the review lesson slots for a course — one after every 3rd unit.
+// IDs are stable so they can be stored in lesson_progress.
+function getReviewSlots(targetLang) {
+  const course = getCourse(targetLang);
+  const units = course.units;
+  const slots = [];
+  for (let i = 2; i < units.length; i += 3) {
+    const coveredUnitIds = units.slice(0, i + 1).map(u => u.id);
+    slots.push({
+      id: `review-${targetLang}-after-${units[i].id}`,
+      afterUnitIndex: i,
+      coveredUnitIds,
+      title: 'Wiederholung',
+      sub: `${units[Math.max(0, i - 1)].title} + ${units[i].title}`,
+      xp: 20,
+    });
+  }
+  return slots;
+}
+
+// Returns all quiz questions from the covered units — the dynamic review pool.
+function getReviewQuestionPool(targetLang, coveredUnitIds) {
+  const course = getCourse(targetLang);
+  const idSet = new Set(coveredUnitIds);
+  const pool = [];
+  for (const unit of course.units) {
+    if (idSet.has(unit.id)) {
+      for (const lesson of unit.lessons) {
+        pool.push(...lesson.quiz);
+      }
+    }
+  }
+  return pool;
+}
+
 function getAllLessonsFlat(targetLang) {
   const course = getCourse(targetLang);
   const flat = [];
@@ -384,4 +423,4 @@ function findLesson(targetLang, lessonId) {
   return null;
 }
 
-module.exports = { COURSES, getCourse, getAllLessonsFlat, findLesson, COMPANION_CHIPS };
+module.exports = { COURSES, getCourse, getAllLessonsFlat, findLesson, COMPANION_CHIPS, getReviewSlots, getReviewQuestionPool };

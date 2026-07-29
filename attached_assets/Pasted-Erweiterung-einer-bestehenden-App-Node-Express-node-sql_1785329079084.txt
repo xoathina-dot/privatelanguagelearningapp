@@ -1,0 +1,44 @@
+Erweiterung einer bestehenden App (Node/Express + node:sqlite + Vanilla-JS-Frontend). Bitte NICHT
+die restliche Architektur verändern. Wenn etwas unklar ist, lieber kurz nachfragen als zu raten.
+Die drei Blöcke können nacheinander umgesetzt werden, falls es in einem Rutsch zu viel wird.
+
+## Block A: Lektions-Abschluss-Animation (ohne Maskottchen — kommt später separat)
+
+- Im Quiz-Ergebnis-Screen (public/app.js, renderQuiz() -> Zweig q.done): kurzer Konfetti-Effekt
+  (kleine farbige Rechtecke/Kreise in den App-Akzentfarben, die von oben reinfallen und
+  ausblenden — vanilla JS/CSS, keine externe Library), sowie der XP-Wert von 0 hochzählend
+  animiert statt sofort fix angezeigt
+- Alles nur einmal beim Erreichen des Ergebnis-Screens abspielen, nicht bei jedem Re-Render
+- Bitte im Markup/CSS eine leere, leicht erkennbare Stelle (z. B. Kommentar
+  "MASCOT_PLACEHOLDER") lassen, wo später ein Maskottchen-Bild eingesetzt wird — noch kein
+  Bild einbauen, nur den Platz vorbereiten
+
+## Block B: Wiederholungs-Lektionen
+
+- In server/content.js: nach jeder 2.-3. Einheit (unit) eine zusätzliche Lektion vom Typ
+  "review" einfügen, die 4-5 Quiz-Fragen zufällig aus bereits vorherigen Einheiten derselben
+  Sprache zieht (serverseitig zusammengestellt, nicht in content.js hart kodiert, damit sich der
+  Fragenpool automatisch mit neuem Content erweitert)
+- Review-Lektionen zählen normal für XP/Streak, aber NICHT für die "erste Lektion einer neuen
+  Einheit ist current"-Logik blockierend — falls eine Review-Lektion übersprungen wird, soll das
+  Freischalten der nächsten regulären Einheit nicht verhindert werden
+- Lesson-Liste (public/app.js, renderLessons): Review-Lektionen optisch leicht abheben
+  (z. B. anderes Icon/Badge "Wiederholung")
+
+## Block C: Zwei neue Aufgabentypen im Quiz
+
+Aktuelle Quiz-Fragen haben nur type "multiple-choice" (impliziert). Bitte ergänzen:
+
+1. **Satzbau** (type: "word-order"): Frage zeigt eine Übersetzung, User tippt vorgegebene
+   Wort-Kacheln in der richtigen Reihenfolge an, um den Zielsatz zu bilden (typisches
+   Duolingo-Format). Datenstruktur pro Frage: { type: "word-order", prompt, words: [...],
+   correctOrder: [...] }
+2. **Hören** (type: "listening"): nutzt die Web Speech API (window.speechSynthesis,
+   lang "de-DE" bzw. "el-GR") um den Zielsatz vorzulesen, User wählt danach aus
+   Multiple-Choice-Optionen die richtige Übersetzung/Schreibweise. Kein externer API-Call,
+   rein clientseitig.
+
+Bestehende Multiple-Choice-Fragen bleiben wie sie sind (type optional, Fallback = multiple-choice
+falls kein type gesetzt ist — bestehender Content in server/content.js darf nicht kaputtgehen).
+Neue Beispielfragen von den beiden neuen Typen bitte in 2-3 bestehende Lektionen als zusätzliche
+Fragen einbauen, nicht alle bestehenden Fragen umbauen.
