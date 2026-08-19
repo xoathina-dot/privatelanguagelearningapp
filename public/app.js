@@ -26,6 +26,7 @@
     quiz: null,
     aiConfigured: true,
     ttsConfigured: true,
+    expandedUnits: null,
     contentImportOpen: false,
     contentImportLang: 'de',
     contentImportDraft: '',
@@ -181,6 +182,13 @@
 
   async function loadLessons() {
     state.lessons = await api('/lessons');
+    // Only set a default the first time — after that, respect whatever
+    // the person has manually expanded/collapsed (e.g. after finishing a
+    // lesson, we don't want to snap their open unit shut).
+    if (!state.expandedUnits) {
+      const currentUnit = state.lessons.units.find(u => u.lessons.some(l => l.state === 'current'));
+      state.expandedUnits = new Set(currentUnit ? [currentUnit.id] : []);
+    }
   }
 
   async function loadTutor() {
@@ -343,6 +351,16 @@
   async function toggleVocabFav(vocabId) {
     await api('/vocab/' + encodeURIComponent(vocabId) + '/toggle-favorite', { method: 'POST' });
     await loadVocab();
+    render();
+  }
+
+  function toggleUnit(unitId) {
+    if (!state.expandedUnits) state.expandedUnits = new Set();
+    if (state.expandedUnits.has(unitId)) {
+      state.expandedUnits.delete(unitId);
+    } else {
+      state.expandedUnits.add(unitId);
+    }
     render();
   }
 
@@ -656,15 +674,22 @@
     const heading = isCompanion
       ? `<div class="section-row" style="margin-bottom:8px"><h6>Η πρόοδος του/της ${escapeHtml(state.lessons.learnerDisplayName)}</h6></div>`
       : '';
-    return heading + state.lessons.units.map(unit => `
+    return heading + state.lessons.units.map(unit => {
+      const doneCount = unit.lessons.filter(l => l.state === 'done').length;
+      const isExpanded = state.expandedUnits && state.expandedUnits.has(unit.id);
+      return `
       <div class="unit-block">
-        <div class="unit-head">
+        <button class="unit-head" data-action="toggle-unit" data-unit="${unit.id}">
           <div>
             <div class="unit-title">${escapeHtml(unit.title)}</div>
-            <div class="unit-sub">${escapeHtml(unit.sub)}</div>
+            <div class="unit-sub">${escapeHtml(unit.sub)} · ${doneCount}/${unit.lessons.length} ✓</div>
           </div>
-          <span class="unit-level">${escapeHtml(unit.level)}</span>
-        </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="unit-level">${escapeHtml(unit.level)}</span>
+            <span class="unit-chevron ${isExpanded ? 'open' : ''}">▾</span>
+          </div>
+        </button>
+        ${isExpanded ? `
         <div class="lesson-list">
           ${unit.lessons.map(lesson => {
             const dotContent = lesson.state === 'done' ? '✓' : lesson.state === 'current' ? '▸' : '•';
@@ -686,8 +711,10 @@
             `;
           }).join('')}
         </div>
+        ` : ''}
       </div>
-    `).join('');
+    `;
+    }).join('');
   }
 
   function renderTutor() {
@@ -989,6 +1016,7 @@
       case 'go-profile': return goTab('profile');
       case 'toggle-dark': return toggleDarkMode();
       case 'open-lesson': return openLesson(el.getAttribute('data-lesson'));
+      case 'toggle-unit': return toggleUnit(el.getAttribute('data-unit'));
       case 'start-quiz-from-intro': return startQuizFromIntro();
       case 'close-quiz': return closeQuiz();
       case 'quiz-answer': return selectAnswer(el.getAttribute('data-opt'));

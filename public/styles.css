@@ -226,15 +226,23 @@ input, button { font-family: inherit; }
 .note-sub { font-size: 10.5px; color: var(--c-muted); margin-top: 3px; }
 
 /* ---------- Lessons ---------- */
-.unit-block { margin-bottom: 22px; }
-.unit-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
-.unit-title { font-family: var(--font-heading); font-weight: 800; font-size: 16px; }
-.unit-sub { font-size: 11px; color: var(--c-muted); }
+.unit-block { margin-bottom: 14px; }
+.unit-head {
+  display: flex; justify-content: space-between; align-items: center; width: 100%;
+  border: none; background: var(--c-surface); box-shadow: var(--shadow-sm); border-radius: 16px;
+  padding: 14px 16px; cursor: pointer; text-align: left; font-family: inherit;
+}
+.unit-title { font-family: var(--font-heading); font-weight: 800; font-size: 16px; color: var(--color-text); }
+.unit-sub { font-size: 11px; color: var(--c-muted); margin-top: 2px; }
 .unit-level {
   font-size: 10.5px; font-weight: 600; padding: 3px 9px; border-radius: 999px;
   background: color-mix(in srgb, var(--color-text) 8%, transparent); color: var(--c-muted);
 }
-.lesson-list { border-radius: 20px; background: var(--c-surface); box-shadow: var(--shadow-sm); overflow: hidden; }
+.unit-chevron {
+  display: inline-block; color: var(--c-muted); font-size: 13px; transition: transform .18s ease;
+}
+.unit-chevron.open { transform: rotate(180deg); }
+.lesson-list { border-radius: 20px; background: var(--c-surface); box-shadow: var(--shadow-sm); overflow: hidden; margin-top: 8px; }
 .lesson-row {
   display: flex; align-items: center; gap: 13px; padding: 13px 14px;
   border-bottom: 1px solid var(--c-divider-soft); border-left: none; border-right: none; border-top: none;
