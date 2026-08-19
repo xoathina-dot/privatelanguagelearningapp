@@ -12,10 +12,11 @@ function validateLesson(lesson) {
   if (!lesson.id || typeof lesson.id !== 'string') return 'lesson_missing_id';
   if (!lesson.title || typeof lesson.title !== 'string') return 'lesson_missing_title';
   if (typeof lesson.xp !== 'number' || lesson.xp <= 0) return 'lesson_missing_xp';
+  if (lesson.intro !== undefined && typeof lesson.intro !== 'string') return 'invalid_lesson_intro';
   if (!Array.isArray(lesson.quiz) || !lesson.quiz.length) return 'lesson_missing_quiz';
   for (const q of lesson.quiz) {
     if (!q || typeof q !== 'object') return 'invalid_quiz_question';
-    if (!q.prompt || !q.translation || !q.answer) return 'quiz_question_missing_fields';
+    if (!q.prompt || !q.answer) return 'quiz_question_missing_fields';
     if (!Array.isArray(q.options) || q.options.length < 2) return 'quiz_question_needs_options';
     if (!q.options.includes(q.answer)) return 'quiz_answer_not_in_options';
   }

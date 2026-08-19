@@ -170,7 +170,13 @@ router.get('/:lessonId/quiz', requireAuth, (req, res) => {
   }
   const found = findLesson(req.user.target_lang, req.params.lessonId);
   if (!found) return res.status(404).json({ error: 'lesson_not_found' });
-  res.json({ lessonTitle: found.lesson.title, unitTitle: found.unit.title, quiz: found.lesson.quiz, xp: found.lesson.xp });
+  res.json({
+    lessonTitle: found.lesson.title,
+    unitTitle: found.unit.title,
+    quiz: found.lesson.quiz,
+    xp: found.lesson.xp,
+    intro: found.lesson.intro || null,
+  });
 });
 
 module.exports = { router, currentLevelInfo, DAILY_GOAL_XP, effectiveLearner, getCurrentLesson, buildUnitsWithState };

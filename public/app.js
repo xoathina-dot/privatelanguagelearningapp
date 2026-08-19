@@ -215,6 +215,8 @@
         unitTitle: data.unitTitle,
         lessonTitle: data.lessonTitle,
         xp: data.xp,
+        intro: data.intro,
+        showingIntro: !!data.intro,
         questions: data.quiz,
         index: 0,
         selected: null,
@@ -224,6 +226,11 @@
       };
       render();
     } catch (e) { console.error(e); }
+  }
+
+  function startQuizFromIntro() {
+    if (state.quiz) state.quiz.showingIntro = false;
+    render();
   }
 
   function closeQuiz() {
@@ -333,7 +340,7 @@
     lesson_missing_title: 'Eine Lektion hat keinen title.',
     lesson_missing_xp: 'Eine Lektion braucht xp (Zahl > 0).',
     lesson_missing_quiz: 'Eine Lektion braucht mindestens eine Quiz-Frage.',
-    quiz_question_missing_fields: 'Eine Quiz-Frage braucht prompt, translation und answer.',
+    quiz_question_missing_fields: 'Eine Quiz-Frage braucht prompt und answer.',
     quiz_question_needs_options: 'Eine Quiz-Frage braucht mindestens 2 options.',
     quiz_answer_not_in_options: 'Die answer einer Quiz-Frage muss in ihren options vorkommen.',
     duplicate_lesson_id: 'Diese Lektions-id existiert schon (in einer anderen Einheit). Bitte eine neue id wählen.',
@@ -791,6 +798,21 @@
         </div>
       `;
     }
+    if (q.showingIntro) {
+      return `
+        <div class="quiz-overlay">
+          <div class="quiz-head">
+            <button class="quiz-close" data-action="close-quiz">×</button>
+          </div>
+          <div class="quiz-intro-body">
+            <div class="quiz-intro-unit">${escapeHtml(q.unitTitle)}</div>
+            <div class="quiz-intro-title">${escapeHtml(q.lessonTitle)}</div>
+            <div class="quiz-intro-text">${escapeHtml(q.intro || '')}</div>
+            <button class="btn-cta" data-action="start-quiz-from-intro">Ξεκίνα →</button>
+          </div>
+        </div>
+      `;
+    }
     const question = q.questions[q.index];
     const progressPct = Math.round(((q.index + (q.selected ? 1 : 0)) / q.questions.length) * 100);
     const isCorrectSelected = q.selected === question.answer;
@@ -817,7 +839,7 @@
           ${q.selected ? `
             <div class="quiz-feedback">
               <div class="quiz-feedback-title" style="color:${isCorrectSelected ? 'var(--color-accent)' : 'var(--color-text)'}">${isCorrectSelected ? '✓ Σωστά! Nice!' : '△ Σχεδόν — δες τη σωστή απάντηση'}</div>
-              <div class="quiz-feedback-sub">${escapeHtml(question.translation)}</div>
+              ${question.explanation ? `<div class="quiz-feedback-explanation">${escapeHtml(question.explanation)}</div>` : ''}
               <button class="btn-cta" data-action="quiz-next">${q.index + 1 >= q.questions.length ? 'Ολοκλήρωση' : 'Επόμενο'}</button>
             </div>
           ` : ''}
@@ -868,6 +890,7 @@
       case 'go-profile': return goTab('profile');
       case 'toggle-dark': return toggleDarkMode();
       case 'open-lesson': return openLesson(el.getAttribute('data-lesson'));
+      case 'start-quiz-from-intro': return startQuizFromIntro();
       case 'close-quiz': return closeQuiz();
       case 'quiz-answer': return selectAnswer(el.getAttribute('data-opt'));
       case 'quiz-next': return quizNext();
