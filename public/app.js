@@ -25,6 +25,12 @@
     profile: null,
     quiz: null,
     aiConfigured: true,
+    contentImportOpen: false,
+    contentImportLang: 'de',
+    contentImportDraft: '',
+    contentImportError: null,
+    contentImportSuccess: null,
+    contentImportLoading: false,
   };
 
   const TAB_META = [
@@ -303,6 +309,69 @@
       await loadVocab();
       render();
     } catch (e) { console.error(e); }
+  }
+
+  function openContentImport() {
+    state.contentImportOpen = true;
+    state.contentImportError = null;
+    state.contentImportSuccess = null;
+    render();
+  }
+
+  function cancelContentImport() {
+    state.contentImportOpen = false;
+    state.contentImportError = null;
+    state.contentImportSuccess = null;
+    render();
+  }
+
+  const IMPORT_ERROR_MESSAGES = {
+    invalid_target_lang: 'Ungültige Sprachauswahl.',
+    invalid_unit: 'JSON braucht mindestens: id, title, lessons (nicht leer).',
+    unit_id_collides_with_static: 'Diese unit-id gehört schon zu einer eingebauten Einheit. Bitte eine neue id wählen.',
+    lesson_missing_id: 'Eine Lektion hat keine id.',
+    lesson_missing_title: 'Eine Lektion hat keinen title.',
+    lesson_missing_xp: 'Eine Lektion braucht xp (Zahl > 0).',
+    lesson_missing_quiz: 'Eine Lektion braucht mindestens eine Quiz-Frage.',
+    quiz_question_missing_fields: 'Eine Quiz-Frage braucht prompt, translation und answer.',
+    quiz_question_needs_options: 'Eine Quiz-Frage braucht mindestens 2 options.',
+    quiz_answer_not_in_options: 'Die answer einer Quiz-Frage muss in ihren options vorkommen.',
+    duplicate_lesson_id: 'Diese Lektions-id existiert schon (in einer anderen Einheit). Bitte eine neue id wählen.',
+    invalid_json: 'Das ist kein gültiges JSON.',
+  };
+
+  async function submitContentImport() {
+    let parsed;
+    try {
+      parsed = JSON.parse(state.contentImportDraft);
+    } catch (e) {
+      state.contentImportError = IMPORT_ERROR_MESSAGES.invalid_json;
+      state.contentImportSuccess = null;
+      render();
+      return;
+    }
+    state.contentImportLoading = true;
+    state.contentImportError = null;
+    state.contentImportSuccess = null;
+    render();
+    try {
+      const result = await api('/content-import', {
+        method: 'POST',
+        body: { targetLang: state.contentImportLang, unit: parsed },
+      });
+      state.contentImportLoading = false;
+      state.contentImportSuccess = `${result.lessonsImported} Lektion(en) in „${result.unit.title}“ importiert.`;
+      state.contentImportDraft = '';
+      if (state.lessons) await loadLessons();
+      render();
+    } catch (e) {
+      state.contentImportLoading = false;
+      const code = e.data && e.data.error;
+      let msg = IMPORT_ERROR_MESSAGES[code] || 'Import fehlgeschlagen. Bitte JSON prüfen.';
+      if (e.data && e.data.lessonId) msg += ` (Lektion: ${e.data.lessonId})`;
+      state.contentImportError = msg;
+      render();
+    }
   }
 
   async function toggleMessageTranslation(msg, el) {
@@ -684,6 +753,27 @@
         </div>
       </div>
       <button class="btn-logout" data-action="logout">Abmelden</button>
+
+      <div class="content-import">
+        ${state.contentImportOpen ? `
+          <div class="vocab-add-form content-import-form">
+            <div class="section-row" style="margin-bottom:0"><h6>Inhalte importieren (JSON)</h6></div>
+            <select data-field="import-lang">
+              <option value="de" ${state.contentImportLang === 'de' ? 'selected' : ''}>Deutsch-Kurs</option>
+              <option value="el" ${state.contentImportLang === 'el' ? 'selected' : ''}>Griechisch-Kurs</option>
+            </select>
+            <textarea data-field="import-json" rows="8" placeholder='{"id":"new_unit","title":"...","lessons":[...]}'>${escapeHtml(state.contentImportDraft)}</textarea>
+            ${state.contentImportError ? `<div class="vocab-add-error">${escapeHtml(state.contentImportError)}</div>` : ''}
+            ${state.contentImportSuccess ? `<div class="content-import-success">${escapeHtml(state.contentImportSuccess)}</div>` : ''}
+            <div class="vocab-add-actions">
+              <button class="btn-cta" style="width:auto;padding:10px 18px" data-action="submit-content-import">${state.contentImportLoading ? '…' : 'Importieren'}</button>
+              <button class="chip" data-action="cancel-content-import">Schließen</button>
+            </div>
+          </div>
+        ` : `
+          <button class="chip" data-action="open-content-import">+ Lektionen importieren (JSON)</button>
+        `}
+      </div>
     `;
   }
 
@@ -759,9 +849,17 @@
       messageInput.focus();
       messageInput.setSelectionRange(messageInput.value.length, messageInput.value.length);
     }
-    root.querySelectorAll('.vocab-add-form [data-field]').forEach(el => {
+    root.querySelectorAll('.vocab-add-form:not(.content-import-form) [data-field]').forEach(el => {
       el.addEventListener('input', (e) => { state.vocabDraft[el.getAttribute('data-field')] = e.target.value; });
     });
+    const importLangSelect = root.querySelector('[data-field="import-lang"]');
+    if (importLangSelect) {
+      importLangSelect.addEventListener('change', (e) => { state.contentImportLang = e.target.value; });
+    }
+    const importJsonArea = root.querySelector('[data-field="import-json"]');
+    if (importJsonArea) {
+      importJsonArea.addEventListener('input', (e) => { state.contentImportDraft = e.target.value; });
+    }
   }
 
   function handleAction(action, el) {
@@ -779,6 +877,9 @@
       case 'cancel-add-vocab': return cancelAddVocab();
       case 'submit-vocab': return submitVocab();
       case 'delete-vocab': return deleteVocab(el.getAttribute('data-id'));
+      case 'open-content-import': return openContentImport();
+      case 'cancel-content-import': return cancelContentImport();
+      case 'submit-content-import': return submitContentImport();
       case 'translate-msg': {
         const id = Number(el.getAttribute('data-id'));
         const msg = state.messages.find(m => m.id === id);

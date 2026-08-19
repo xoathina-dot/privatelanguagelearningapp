@@ -11,7 +11,7 @@ const { router: vocabRouter } = require('./routes/vocab');
 const { router: messagesRouter } = require('./routes/messages');
 const { router: tutorRouter } = require('./routes/tutor');
 const { router: profileRouter } = require('./routes/profile');
-const { router: contentRouter } = require('./routes/content');
+const { router: contentImportRouter } = require('./routes/content-import');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -29,7 +29,7 @@ app.use('/api/vocab', vocabRouter);
 app.use('/api/messages', messagesRouter);
 app.use('/api/tutor', tutorRouter);
 app.use('/api/profile', profileRouter);
-app.use('/api/content', contentRouter);
+app.use('/api/content-import', contentImportRouter);
 
 app.use(express.static(path.join(__dirname, '..', 'public')));
 

@@ -51,6 +51,17 @@ db.exec(`
     created_at TEXT NOT NULL
   );
 
+  CREATE TABLE IF NOT EXISTS custom_units (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    target_lang TEXT NOT NULL,
+    unit_id TEXT NOT NULL,
+    unit_json TEXT NOT NULL,
+    added_by INTEGER NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE(target_lang, unit_id)
+  );
+
   CREATE TABLE IF NOT EXISTS messages (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     sender_id INTEGER NOT NULL,

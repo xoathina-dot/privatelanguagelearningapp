@@ -1,6 +1,8 @@
 // Static curriculum content, seeded once. Not user-specific.
 // Two learning directions: "de" (learning German, native Greek) and "el" (learning Greek, native German).
 
+const db = require('./db');
+
 const COURSES = {
   de: {
     label: 'Γερμανικά',
@@ -368,8 +370,18 @@ const MESSAGE_QUICK_REPLIES = {
   el: ['Μπράβο σου! 💪', 'Είμαι περήφανος/η για σένα!', 'Συνέχισε έτσι!', 'Τα καταφέρνεις!', 'Ανυπομονώ για αύριο 😊'],
 };
 
+// User-imported units (via the JSON paste import) live in the DB rather than
+// in this static file, and get appended after the built-in units.
+function loadCustomUnits(targetLang) {
+  const rows = db.prepare('SELECT unit_json FROM custom_units WHERE target_lang = ? ORDER BY id ASC').all(targetLang);
+  return rows.map(r => JSON.parse(r.unit_json));
+}
+
 function getCourse(targetLang) {
-  return COURSES[targetLang] || COURSES.de;
+  const base = COURSES[targetLang] || COURSES.de;
+  const customUnits = loadCustomUnits(targetLang);
+  if (!customUnits.length) return base;
+  return { ...base, units: [...base.units, ...customUnits] };
 }
 
 function getAllLessonsFlat(targetLang) {
