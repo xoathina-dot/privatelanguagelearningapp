@@ -1,21 +1,33 @@
 const express = require('express');
 const db = require('../db');
 const { requireAuth, getUserById } = require('../auth');
-const { getCourse, getAllLessonsFlat, findLesson, getReviewSlots, getReviewQuestionPool } = require('../content');
+const { getCourse, getAllLessonsFlat, findLesson } = require('../content');
 
 const router = express.Router();
 const DAILY_GOAL_XP = 20;
 const LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
 
+// Streaks must reset at local midnight, not UTC midnight — otherwise evening
+// activity (UTC+2/+3) gets counted on the wrong calendar day and the streak
+// can break or double-count depending on time of day.
+const APP_TIMEZONE = 'Europe/Athens';
+
+function dateStrInAppTz(date) {
+  // en-CA locale formats as YYYY-MM-DD, which is what we store/compare.
+  return new Intl.DateTimeFormat('en-CA', { timeZone: APP_TIMEZONE }).format(date);
+}
+
 function todayStr() {
-  // Use Europe/Berlin so streak/daily-goal don't flip at UTC midnight.
-  return new Date().toLocaleDateString('sv', { timeZone: 'Europe/Berlin' });
+  return dateStrInAppTz(new Date());
 }
 
 function yesterdayStr() {
-  const d = new Date();
-  d.setDate(d.getDate() - 1);
-  return d.toLocaleDateString('sv', { timeZone: 'Europe/Berlin' });
+  // Subtract 1 calendar day in the app timezone, not 24h in UTC — this stays
+  // correct across DST transitions (e.g. the day summer time starts/ends).
+  const [y, m, d] = todayStr().split('-').map(Number);
+  const localNoonUtc = new Date(Date.UTC(y, m - 1, d, 12)); // noon avoids DST edge issues
+  localNoonUtc.setUTCDate(localNoonUtc.getUTCDate() - 1);
+  return dateStrInAppTz(localNoonUtc);
 }
 
 function completedLessonIds(userId) {
@@ -34,60 +46,23 @@ function effectiveLearner(user) {
 
 function buildUnitsWithState(learner) {
   const course = getCourse(learner.target_lang);
-  // Only regular (non-review) lessons determine the main unlock chain.
   const flat = getAllLessonsFlat(learner.target_lang);
   const done = completedLessonIds(learner.id);
   const firstNotDoneIndex = flat.findIndex(l => !done.has(l.id));
 
-  const reviewSlots = getReviewSlots(learner.target_lang);
-  const result = [];
-
-  course.units.forEach((unit, unitIdx) => {
-    // Regular unit
-    result.push({
-      id: unit.id,
-      title: unit.title,
-      sub: unit.sub,
-      level: unit.level,
-      isReview: false,
-      lessons: unit.lessons.map(lesson => {
-        const flatIdx = flat.findIndex(l => l.id === lesson.id);
-        const lessonState = done.has(lesson.id)
-          ? 'done'
-          : (firstNotDoneIndex === flatIdx ? 'current' : 'locked');
-        return { id: lesson.id, title: lesson.title, sub: lesson.sub, xp: lesson.xp, state: lessonState, isReview: false };
-      }),
-    });
-
-    // Inject review lesson after this unit if a slot exists.
-    // Review lessons do NOT affect the main unlock chain for regular lessons.
-    const slot = reviewSlots.find(s => s.afterUnitIndex === unitIdx);
-    if (slot) {
-      // Available only once all covered units' regular lessons are done.
-      const allCoveredDone = slot.coveredUnitIds.every(uid => {
-        const u = course.units.find(u2 => u2.id === uid);
-        return u && u.lessons.every(l => done.has(l.id));
-      });
-      const reviewState = done.has(slot.id) ? 'done' : (allCoveredDone ? 'current' : 'locked');
-      result.push({
-        id: slot.id,
-        title: slot.title,
-        sub: slot.sub,
-        level: '★',
-        isReview: true,
-        lessons: [{
-          id: slot.id,
-          title: slot.title,
-          sub: slot.sub,
-          xp: slot.xp,
-          state: reviewState,
-          isReview: true,
-        }],
-      });
-    }
-  });
-
-  return result;
+  return course.units.map(unit => ({
+    id: unit.id,
+    title: unit.title,
+    sub: unit.sub,
+    level: unit.level,
+    lessons: unit.lessons.map(lesson => {
+      const flatIdx = flat.findIndex(l => l.id === lesson.id);
+      const state = done.has(lesson.id)
+        ? 'done'
+        : (firstNotDoneIndex === flatIdx ? 'current' : 'locked');
+      return { id: lesson.id, title: lesson.title, sub: lesson.sub, xp: lesson.xp, state };
+    }),
+  }));
 }
 
 function currentLevelInfo(learner) {
@@ -149,14 +124,8 @@ router.post('/:lessonId/complete', requireAuth, (req, res) => {
   }
   const user = req.user;
   const { lessonId } = req.params;
-
-  // Support review lessons in addition to regular lessons.
-  let found = findLesson(user.target_lang, lessonId);
-  if (!found) {
-    const slot = getReviewSlots(user.target_lang).find(s => s.id === lessonId);
-    if (!slot) return res.status(404).json({ error: 'lesson_not_found' });
-    found = { lesson: { xp: slot.xp, title: slot.title }, unit: { title: 'Wiederholung' } };
-  }
+  const found = findLesson(user.target_lang, lessonId);
+  if (!found) return res.status(404).json({ error: 'lesson_not_found' });
 
   const already = db.prepare('SELECT 1 FROM lesson_progress WHERE user_id = ? AND lesson_id = ?').get(user.id, lessonId);
   const today = todayStr();
@@ -171,8 +140,7 @@ router.post('/:lessonId/complete', requireAuth, (req, res) => {
     if (user.last_active_date === today) {
       newXpToday += found.lesson.xp;
     } else {
-      const yesterday = yesterdayStr();
-      newStreak = user.last_active_date === yesterday ? user.streak + 1 : 1;
+      newStreak = user.last_active_date === yesterdayStr() ? user.streak + 1 : 1;
       newXpToday = found.lesson.xp;
     }
 
@@ -200,18 +168,6 @@ router.get('/:lessonId/quiz', requireAuth, (req, res) => {
   if (req.user.role === 'companion') {
     return res.status(403).json({ error: 'companion_read_only' });
   }
-
-  // Check for review lesson first.
-  const reviewSlots = getReviewSlots(req.user.target_lang);
-  const slot = reviewSlots.find(s => s.id === req.params.lessonId);
-  if (slot) {
-    const pool = getReviewQuestionPool(req.user.target_lang, slot.coveredUnitIds);
-    // Pick 5 questions at random — pool grows as more units are covered.
-    const shuffled = [...pool].sort(() => Math.random() - 0.5);
-    const quiz = shuffled.slice(0, Math.min(5, shuffled.length));
-    return res.json({ lessonTitle: slot.title, unitTitle: 'Wiederholung', quiz, xp: slot.xp, isReview: true });
-  }
-
   const found = findLesson(req.user.target_lang, req.params.lessonId);
   if (!found) return res.status(404).json({ error: 'lesson_not_found' });
   res.json({ lessonTitle: found.lesson.title, unitTitle: found.unit.title, quiz: found.lesson.quiz, xp: found.lesson.xp });
