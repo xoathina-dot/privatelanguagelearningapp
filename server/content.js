@@ -14,9 +14,9 @@ const COURSES = {
     ],
     units: [
       {
-        id: 'u1', title: 'Πρώτα βήματα', sub: 'First steps', level: 'A1',
+        id: 'u1', title: 'Πρώτα βήματα', sub: 'Erste Schritte', level: 'A1',
         lessons: [
-          { id: 'u1l1', title: 'Χαιρετισμοί', sub: 'Greetings', xp: 10,
+          { id: 'u1l1', title: 'Χαιρετισμοί', sub: 'Begrüßungen', xp: 10,
             intro: 'Στα γερμανικά ο χαιρετισμός αλλάζει ανάλογα με την ώρα της ημέρας. Το "Hallo" είναι ανεπίσημο και ταιριάζει πάντα — αλλά το "Guten Morgen/Tag/Abend" δείχνει ότι πρόσεξες την ώρα, κάτι που εκτιμάται ιδιαίτερα στη Γερμανία.',
             quiz: [
               { prompt: 'Γεια σου', answer: 'Hallo', options: ['Hallo', 'Tschüss', 'Bitte'],
@@ -32,7 +32,7 @@ const COURSES = {
               { prompt: 'Καληνύχτα', answer: 'Gute Nacht', options: ['Gute Nacht', 'Guten Abend', 'Guten Tag'],
                 explanation: 'Το "Gute Nacht" λέγεται ΜΟΝΟ πριν κοιμηθεί κανείς — ποτέ ως αποχαιρετισμός νωρίς το βράδυ (τότε λέμε "Guten Abend" ή "Tschüss").' },
             ] },
-          { id: 'u1l2', title: 'Ναι, όχι, ευχαριστώ', sub: 'Yes, no, thank you', xp: 10,
+          { id: 'u1l2', title: 'Ναι, όχι, ευχαριστώ', sub: 'Ja, nein, danke', xp: 10,
             intro: 'Οι βασικές λέξεις-κλειδιά κάθε συζήτησης. Πρόσεξε: το "bitte" έχει δύο σημασίες — "παρακαλώ" όταν ζητάς κάτι, και "παρακαλώ/τίποτα" όταν απαντάς σε ευχαριστίες.',
             quiz: [
               { prompt: 'Ναι', answer: 'Ja', options: ['Ja', 'Nein', 'Bitte'],
@@ -48,7 +48,7 @@ const COURSES = {
               { prompt: 'Κανένα πρόβλημα', answer: 'Kein Problem', options: ['Kein Problem', 'Kein Ding', 'Keine Sache'],
                 explanation: 'Ανεπίσημη, φιλική απάντηση σε ευχαριστίες ή απολογίες — κυριολεκτικά "κανένα πρόβλημα".' },
             ] },
-          { id: 'u1l3', title: 'Πώς είσαι;', sub: 'How are you', xp: 10,
+          { id: 'u1l3', title: 'Πώς είσαι;', sub: "Wie geht's?", xp: 10,
             intro: 'Η ερώτηση "Wie geht es dir?" είναι κυριολεκτικά "Πώς πάει σε εσένα;" — το "es" (αυτό) είναι το υποκείμενο, το "dir" σημαίνει "σε εσένα" (δοτική πτώση), όχι "εσύ".',
             quiz: [
               { prompt: 'Πώς είσαι;', answer: 'Wie geht es dir?', options: ['Wie geht es dir?', 'Wie heißt du?', 'Wo bist du?'],
@@ -65,9 +65,9 @@ const COURSES = {
         ],
       },
       {
-        id: 'u2', title: 'Παρουσιάζομαι', sub: 'Introducing myself', level: 'A1',
+        id: 'u2', title: 'Παρουσιάζομαι', sub: 'Sich vorstellen', level: 'A1',
         lessons: [
-          { id: 'u2l1', title: 'Πώς σε λένε;', sub: "What's your name", xp: 10,
+          { id: 'u2l1', title: 'Πώς σε λένε;', sub: 'Wie heißt du?', xp: 10,
             intro: 'Το ρήμα "heißen" (λέγομαι/ονομάζομαι) είναι από τα πρώτα ρήματα που μαθαίνει κανείς. Στο α\' ενικό γίνεται "ich heiße", στο β\' ενικό "du heißt".',
             quiz: [
               { prompt: 'Με λένε', answer: 'Ich heiße', options: ['Ich heiße', 'Du bist', 'Wir sind'],
@@ -81,7 +81,7 @@ const COURSES = {
               { prompt: 'Αυτή είναι η φίλη μου', answer: 'Das ist meine Freundin', options: ['Das ist meine Freundin', 'Das ist mein Freund', 'Das ist meine Familie'],
                 explanation: 'Το "Das ist..." (Αυτή/Αυτός είναι...) χρησιμοποιείται για να συστήσεις κάποιον. "Freundin" (θηλυκό) vs "Freund" (αρσενικό) — πρόσεξε το γένος.' },
             ] },
-          { id: 'u2l2', title: 'Από πού είσαι;', sub: 'Where are you from', xp: 15,
+          { id: 'u2l2', title: 'Από πού είσαι;', sub: 'Woher kommst du?', xp: 15,
             intro: 'Η πρόθεση "aus" (από) συνοδεύει χώρες χωρίς άρθρο στις περισσότερες περιπτώσεις: "aus Griechenland", "aus Deutschland" — χωρίς "der/die/das" μπροστά.',
             quiz: [
               { prompt: 'Από πού είσαι;', answer: 'Woher kommst du?', options: ['Woher kommst du?', 'Wie geht es dir?', 'Wo wohnst du?'],
@@ -95,7 +95,7 @@ const COURSES = {
               { prompt: 'Μένω στο Βερολίνο', answer: 'Ich wohne in Berlin', options: ['Ich wohne in Berlin', 'Ich komme aus Berlin', 'Ich bin in Berlin'],
                 explanation: '"Wohnen" = μένω/κατοικώ (μόνιμα), διαφορετικό από "sein" (είμαι/βρίσκομαι στιγμιαία σε ένα μέρος).' },
             ] },
-          { id: 'u2l3', title: 'Δουλειά & ηλικία', sub: 'Job & age', xp: 15,
+          { id: 'u2l3', title: 'Δουλειά & ηλικία', sub: 'Beruf & Alter', xp: 15,
             intro: 'Προσοχή: στα γερμανικά η ηλικία εκφράζεται με το ρήμα "sein" (είμαι), όχι με "haben" (έχω) όπως σε άλλες γλώσσες — "Ich bin 27 Jahre alt", κυριολεκτικά "είμαι 27 χρόνια γέρος/γερή".',
             quiz: [
               { prompt: 'Πόσο χρονών είσαι;', answer: 'Wie alt bist du?', options: ['Wie alt bist du?', 'Wie heißt du?', 'Wo wohnst du?'],
@@ -112,9 +112,9 @@ const COURSES = {
         ],
       },
       {
-        id: 'u3', title: 'Αριθμοί & ώρα', sub: 'Numbers & time', level: 'A1',
+        id: 'u3', title: 'Αριθμοί & ώρα', sub: 'Zahlen & Uhrzeit', level: 'A1',
         lessons: [
-          { id: 'u3l1', title: 'Αριθμοί 0-10', sub: 'Numbers 0-10', xp: 10,
+          { id: 'u3l1', title: 'Αριθμοί 0-10', sub: 'Zahlen 0–10', xp: 10,
             intro: 'Οι γερμανικοί αριθμοί μέχρι το 10 δεν ακολουθούν πρότυπο — απλά τους αποστηθίζουμε. Από το 13 και πάνω, οι δεκάδες προηγούνται των μονάδων (π.χ. "einundzwanzig" = ένα-και-είκοσι = 21).',
             quiz: [
               { prompt: 'ένα, δύο, τρία', answer: 'eins, zwei, drei', options: ['eins, zwei, drei', 'eins, zwei, vier', 'zwei, drei, vier'],
@@ -130,7 +130,7 @@ const COURSES = {
               { prompt: 'χίλια', answer: 'tausend', options: ['tausend', 'hundert', 'million'],
                 explanation: '"(Ein)tausend" = χίλια, ίδια λογική με το "hundert" — το "ein" συχνά παραλείπεται.' },
             ] },
-          { id: 'u3l2', title: 'Τι ώρα είναι;', sub: 'What time is it', xp: 15,
+          { id: 'u3l2', title: 'Τι ώρα είναι;', sub: 'Wie spät ist es?', xp: 15,
             intro: 'Η ώρα ξεκινά πάντα με απρόσωπο "Es ist" (κυριολεκτικά "αυτό είναι"), ακολουθούμενο από τον αριθμό και τη λέξη "Uhr" (ώρα/ρολόι).',
             quiz: [
               { prompt: 'Τι ώρα είναι;', answer: 'Wie spät ist es?', options: ['Wie spät ist es?', 'Wie viel Uhr kommst du?', 'Was ist die Zeit?'],
@@ -144,7 +144,7 @@ const COURSES = {
               { prompt: 'Τι ώρα φτάνεις;', answer: 'Um wie viel Uhr kommst du an?', options: ['Um wie viel Uhr kommst du an?', 'Wie viel Uhr kommst du?', 'Wann Uhr kommst du?'],
                 explanation: 'Η πρόθεση "um" (στις/κατά τις) χρησιμοποιείται πάντα με συγκεκριμένη ώρα: "um drei Uhr" = στις τρεις.' },
             ] },
-          { id: 'u3l3', title: 'Ημέρες της εβδομάδας', sub: 'Days of the week', xp: 15,
+          { id: 'u3l3', title: 'Ημέρες της εβδομάδας', sub: 'Wochentage', xp: 15,
             intro: 'Όλα τα ουσιαστικά στα γερμανικά γράφονται με κεφαλαίο πρώτο γράμμα — και οι μέρες της εβδομάδας δεν αποτελούν εξαίρεση: Montag, Dienstag, κ.ο.κ.',
             quiz: [
               { prompt: 'Δευτέρα', answer: 'Montag', options: ['Montag', 'Dienstag', 'Sonntag'],
@@ -161,7 +161,7 @@ const COURSES = {
         ],
       },
       {
-        id: 'u4', title: 'Άρθρα & ουσιαστικά', sub: 'Articles & nouns', level: 'A1',
+        id: 'u4', title: 'Άρθρα & ουσιαστικά', sub: 'Artikel & Nomen', level: 'A1',
         lessons: [
           { id: 'u4l1', title: 'Αρσενικό: ο', sub: 'Der', xp: 15,
             intro: 'Τα γερμανικά ουσιαστικά έχουν 3 γένη: αρσενικό (der), θηλυκό (die), ουδέτερο (das). Δυστυχώς δεν υπάρχει πάντα λογικός κανόνας — το καλύτερο είναι να μαθαίνεις κάθε ουσιαστικό ΜΑΖΙ με το άρθρο του, σαν να ήταν μία λέξη.',
@@ -218,9 +218,9 @@ const COURSES = {
         ],
       },
       {
-        id: 'u5', title: 'Οικογένεια & σχέση', sub: 'Family & relationship', level: 'A1',
+        id: 'u5', title: 'Οικογένεια & σχέση', sub: 'Familie & Beziehung', level: 'A1',
         lessons: [
-          { id: 'u5l1', title: 'Η οικογένειά μου', sub: 'My family', xp: 15,
+          { id: 'u5l1', title: 'Η οικογένειά μου', sub: 'Meine Familie', xp: 15,
             intro: 'Τα μέλη της οικογένειας ακολουθούν συνήθως το "φυσικό" γένος τους: άνδρας-συγγενής παίρνει "der", γυναίκα-συγγενής παίρνει "die". Εξαίρεση: "das Mädchen" (κορίτσι) λόγω της κατάληξης -chen.',
             quiz: [
               { prompt: 'η μαμά', answer: 'die Mama', options: ['die Mama', 'der Mama', 'das Mama'],
@@ -236,7 +236,7 @@ const COURSES = {
               { prompt: 'ο θείος / η θεία', answer: 'der Onkel / die Tante', options: ['der Onkel / die Tante', 'die Onkel / der Tante', 'der Tante / die Onkel'],
                 explanation: '"Der Onkel" (θείος) αρσενικό, "die Tante" (θεία) θηλυκό — και τα δύο φυσικά γένη, όπως αναμένεται.' },
             ] },
-          { id: 'u5l2', title: 'Λόγια αγάπης', sub: 'Words of love', xp: 15,
+          { id: 'u5l2', title: 'Λόγια αγάπης', sub: 'Liebesworte', xp: 15,
             intro: 'Το ρήμα "lieben" (αγαπώ) συζυγιέται κανονικά: ich liebe, du liebst. Το "vermissen" (μου λείπεις) λειτουργεί όπως στα ελληνικά — το υποκείμενο είναι αυτός που λείπει σε κάποιον, εδώ όμως εσύ είσαι το υποκείμενο που νιώθει την έλλειψη.',
             quiz: [
               { prompt: 'Σ\' αγαπώ', answer: 'Ich liebe dich', options: ['Ich liebe dich', 'Ich mag dich', 'Ich brauche dich'],
@@ -250,7 +250,7 @@ const COURSES = {
               { prompt: 'Μου αρέσεις πολύ', answer: 'Ich mag dich sehr', options: ['Ich mag dich sehr', 'Ich liebe dich sehr', 'Ich habe dich sehr'],
                 explanation: '"Mögen" (mag) = μου αρέσει κάποιος/κάτι, πιο ήπιο από "lieben". Το "sehr" (πολύ) ενισχύει το συναίσθημα.' },
             ] },
-          { id: 'u5l3', title: 'Η καθημερινότητά μας', sub: 'Our everyday life', xp: 15,
+          { id: 'u5l3', title: 'Η καθημερινότητά μας', sub: 'Unser Alltag', xp: 15,
             intro: 'Το "Wie war dein Tag?" χρησιμοποιεί παρελθοντικό χρόνο (war = ήταν, από το "sein"). Το "Was machen wir?" χρησιμοποιεί ενεστώτα του "machen" στο α\' πληθυντικό (wir machen).',
             quiz: [
               { prompt: 'Πώς ήταν η μέρα σου;', answer: 'Wie war dein Tag?', options: ['Wie war dein Tag?', 'Was machst du heute?', 'Wie geht es dir?'],
@@ -267,9 +267,9 @@ const COURSES = {
         ],
       },
       {
-        id: 'u6', title: 'Ρήματα & σειρά λέξεων', sub: 'Verbs & word order', level: 'A1',
+        id: 'u6', title: 'Ρήματα & σειρά λέξεων', sub: 'Verben & Wortstellung', level: 'A1',
         lessons: [
-          { id: 'u6l1', title: 'Sein & haben', sub: 'To be & to have', xp: 15,
+          { id: 'u6l1', title: 'Sein & haben', sub: 'Είμαι & έχω', xp: 15,
             intro: 'Τα ρήματα "sein" (είμαι) και "haben" (έχω) είναι ανώμαλα και πρέπει να τα αποστηθίσεις: ich bin/habe, du bist/hast, er/sie ist/hat. Είναι τα δύο πιο συχνά ρήματα στη γλώσσα.',
             quiz: [
               { prompt: 'Είμαι', answer: 'Ich bin', options: ['Ich bin', 'Ich habe', 'Du bist'],
@@ -283,7 +283,7 @@ const COURSES = {
               { prompt: 'Έχουμε', answer: 'Wir haben', options: ['Wir haben', 'Wir sind', 'Wir habt'],
                 explanation: 'Α\' πληθυντικό του "haben": "wir haben" — ίδιος τύπος με το απαρέμφατο "haben".' },
             ] },
-          { id: 'u6l2', title: 'Κανονικά ρήματα', sub: 'Regular verbs', xp: 15,
+          { id: 'u6l2', title: 'Κανονικά ρήματα', sub: 'Regelmäßige Verben', xp: 15,
             intro: 'Τα κανονικά ρήματα παίρνουν σταθερές καταλήξεις: ich -e, du -st, er/sie -t, wir -en. Π.χ. "lernen" (μαθαίνω): ich lerne, du lernst, wir lernen.',
             quiz: [
               { prompt: 'Μαθαίνω γερμανικά', answer: 'Ich lerne Deutsch', options: ['Ich lerne Deutsch', 'Ich lernst Deutsch', 'Ich lernen Deutsch'],
@@ -297,7 +297,7 @@ const COURSES = {
               { prompt: 'Δουλεύουν', answer: 'Sie arbeiten', options: ['Sie arbeiten', 'Sie arbeitet', 'Sie arbeite'],
                 explanation: 'Γ\' πληθυντικό "sie" (αυτοί/αυτές) παίρνει κατάληξη -en, ίδια με "wir": "sie arbeiten".' },
             ] },
-          { id: 'u6l3', title: 'Σειρά λέξεων', sub: 'Word order', xp: 20,
+          { id: 'u6l3', title: 'Σειρά λέξεων', sub: 'Wortstellung', xp: 20,
             intro: 'Χρυσός κανόνας στα γερμανικά: το ρήμα είναι ΠΑΝΤΑ η δεύτερη θέση της πρότασης (κανόνας "V2"). Αν η πρόταση ξεκινά με κάτι άλλο εκτός από το υποκείμενο (π.χ. "Heute" = σήμερα), το ρήμα ΠΑΡΑΜΕΝΕΙ δεύτερο και το υποκείμενο πάει τρίτο.',
             quiz: [
               { prompt: 'Σήμερα μαθαίνω γερμανικά', answer: 'Heute lerne ich Deutsch', options: ['Heute lerne ich Deutsch', 'Heute ich lerne Deutsch', 'Ich heute lerne Deutsch'],
@@ -309,7 +309,7 @@ const COURSES = {
               { prompt: 'Το σαββατοκύριακο δεν δουλεύω', answer: 'Am Wochenende arbeite ich nicht', options: ['Am Wochenende arbeite ich nicht', 'Am Wochenende ich arbeite nicht', 'Ich arbeite am Wochenende nicht nicht'],
                 explanation: 'Το "am Wochenende" (χρονική έκφραση) πιάνει την 1η θέση, το ρήμα "arbeite" τη 2η. Το "nicht" (δεν) πάει συνήθως στο τέλος όταν αρνείται όλη την πρόταση.' },
             ] },
-          { id: 'u6l4', title: 'Ερωτηματικές λέξεις', sub: 'Question words', xp: 15,
+          { id: 'u6l4', title: 'Ερωτηματικές λέξεις', sub: 'Fragewörter', xp: 15,
             intro: 'Οι βασικές ερωτηματικές λέξεις: wer (ποιος), was (τι), wo (πού), wann (πότε), warum (γιατί), wie (πώς). Όλες ξεκινούν με "w-", όπως τα αγγλικά "wh-".',
             quiz: [
               { prompt: 'Ποιος;', answer: 'Wer?', options: ['Wer?', 'Was?', 'Wo?'],
@@ -326,9 +326,9 @@ const COURSES = {
         ],
       },
       {
-        id: 'u7', title: 'Στο καφέ & εστιατόριο', sub: 'At the café & restaurant', level: 'A1',
+        id: 'u7', title: 'Στο καφέ & εστιατόριο', sub: 'Im Café & Restaurant', level: 'A1',
         lessons: [
-          { id: 'u7l1', title: 'Παραγγελία', sub: 'Ordering', xp: 15,
+          { id: 'u7l1', title: 'Παραγγελία', sub: 'Bestellen', xp: 15,
             intro: 'Όταν παραγγέλνεις κάτι, το ουσιαστικό μπαίνει σε αιτιατική πτώση (Akkusativ). Γι\' αυτό λέμε "einen Kaffee" (όχι "ein Kaffee") — το αρσενικό άρθρο "ein" γίνεται "einen" στην αιτιατική.',
             quiz: [
               { prompt: 'Έναν καφέ, παρακαλώ', answer: 'Einen Kaffee, bitte', options: ['Einen Kaffee, bitte', 'Ein Wasser, danke', 'Die Rechnung, bitte'],
@@ -340,7 +340,7 @@ const COURSES = {
               { prompt: 'Τον κατάλογο, παρακαλώ', answer: 'Die Speisekarte, bitte', options: ['Die Speisekarte, bitte', 'Das Menü, bitte', 'Der Teller, bitte'],
                 explanation: '"Die Speisekarte" (ο κατάλογος φαγητών) είναι θηλυκό — κυριολεκτικά "χάρτης φαγητού" (Speise + Karte).' },
             ] },
-          { id: 'u7l2', title: 'Πληρωμή', sub: 'Paying', xp: 15,
+          { id: 'u7l2', title: 'Πληρωμή', sub: 'Bezahlen', xp: 15,
             intro: 'Το "die Rechnung" (ο λογαριασμός) είναι θηλυκό ουσιαστικό. Στη φράση "Wie viel kostet das?" το "das" (αυτό) αναφέρεται γενικά σε κάτι, χωρίς να χρειάζεται συγκεκριμένο γένος.',
             quiz: [
               { prompt: 'Τον λογαριασμό, παρακαλώ', answer: 'Die Rechnung, bitte', options: ['Die Rechnung, bitte', 'Das Menü, bitte', 'Den Löffel, bitte'],
@@ -352,7 +352,7 @@ const COURSES = {
               { prompt: 'Κρατήστε τα ρέστα', answer: 'Stimmt so', options: ['Stimmt so', 'Behalten Sie', 'Das Geld bleibt'],
                 explanation: 'Ιδιωματική έκφραση όταν αφήνεις φιλοδώρημα — κυριολεκτικά "έτσι είναι σωστό/ταιριάζει έτσι".' },
             ] },
-          { id: 'u7l3', title: 'Προτιμήσεις φαγητού', sub: 'Food preferences', xp: 15,
+          { id: 'u7l3', title: 'Προτιμήσεις φαγητού', sub: 'Essensvorlieben', xp: 15,
             intro: 'Στην άρνηση, τα γερμανικά χρησιμοποιούν "kein" (καθόλου/κανένα) αντί για "nicht" όταν αρνούμαστε ένα ουσιαστικό: "Ich esse kein Fleisch" (δεν τρώω [καθόλου] κρέας), όχι "Ich esse nicht Fleisch".',
             quiz: [
               { prompt: 'Θα ήθελα', answer: 'Ich möchte', options: ['Ich möchte', 'Ich mag', 'Ich habe'],
@@ -367,9 +367,9 @@ const COURSES = {
         ],
       },
       {
-        id: 'u8', title: 'Στους δρόμους της Γερμανίας', sub: 'Getting around Germany', level: 'A2',
+        id: 'u8', title: 'Στους δρόμους της Γερμανίας', sub: 'Unterwegs in Deutschland', level: 'A2',
         lessons: [
-          { id: 'u8l1', title: 'Μέσα μεταφοράς', sub: 'Transportation', xp: 15,
+          { id: 'u8l1', title: 'Μέσα μεταφοράς', sub: 'Verkehrsmittel', xp: 15,
             intro: 'Το "der Zug" (τρένο) είναι αρσενικό. Όταν ζητάς εισιτήριο, χρησιμοποιείς πάλι αιτιατική: "eine Fahrkarte" (το "eine" εδώ δεν αλλάζει γιατί το "die Fahrkarte" είναι θηλυκό, και τα θηλυκά άρθρα δεν αλλάζουν στην αιτιατική).',
             quiz: [
               { prompt: 'το τρένο', answer: 'der Zug', options: ['der Zug', 'die Zug', 'das Zug'],
@@ -381,7 +381,7 @@ const COURSES = {
               { prompt: 'το αεροπλάνο', answer: 'das Flugzeug', options: ['das Flugzeug', 'der Flugzeug', 'die Flugzeug'],
                 explanation: '"Das Flugzeug", κυριολεκτικά "πέταγμα-πράγμα" (fliegen=πετώ + Zeug=πράγμα) — ουδέτερο.' },
             ] },
-          { id: 'u8l2', title: 'Ρωτώντας για κατεύθυνση', sub: 'Asking for directions', xp: 15,
+          { id: 'u8l2', title: 'Ρωτώντας για κατεύθυνση', sub: 'Nach dem Weg fragen', xp: 15,
             intro: 'Βασικές λέξεις κατεύθυνσης: "geradeaus" (ευθεία), "links" (αριστερά), "rechts" (δεξιά). Συνδυάζονται συχνά με "und dann" (και μετά).',
             quiz: [
               { prompt: 'Πού είναι ο σταθμός;', answer: 'Wo ist der Bahnhof?', options: ['Wo ist der Bahnhof?', 'Wo ist die Toilette?', 'Wann fährt der Zug?'],
@@ -393,7 +393,7 @@ const COURSES = {
               { prompt: 'μακριά', answer: 'weit weg', options: ['weit weg', 'weit hier', 'nah weg'],
                 explanation: '"Weit weg" = μακριά, κυριολεκτικά "μακριά-φευγάτο". Αντίθετο του "in der Nähe" (εδώ κοντά).' },
             ] },
-          { id: 'u8l3', title: 'Στο σούπερ μάρκετ', sub: 'At the supermarket', xp: 15,
+          { id: 'u8l3', title: 'Στο σούπερ μάρκετ', sub: 'Im Supermarkt', xp: 15,
             intro: 'Το "das Brot" (ψωμί) είναι ουδέτερο. Η φράση "Nur das, danke" (μόνο αυτό, ευχαριστώ) χρησιμοποιεί το γενικό "das" αντί για συγκεκριμένο άρθρο — πρακτικό όταν δείχνεις κάτι.',
             quiz: [
               { prompt: 'Πού είναι το ψωμί;', answer: 'Wo ist das Brot?', options: ['Wo ist das Brot?', 'Wo ist die Milch?', 'Was kostet das Brot?'],
@@ -408,9 +408,9 @@ const COURSES = {
         ],
       },
       {
-        id: 'u9', title: 'Σπίτι & καθημερινότητα', sub: 'Home & daily routine', level: 'A2',
+        id: 'u9', title: 'Σπίτι & καθημερινότητα', sub: 'Zuhause & Alltag', level: 'A2',
         lessons: [
-          { id: 'u9l1', title: 'Το σπίτι', sub: 'The apartment', xp: 15,
+          { id: 'u9l1', title: 'Το σπίτι', sub: 'Die Wohnung', xp: 15,
             intro: 'Τα δωμάτια του σπιτιού έχουν διάφορα γένη — δεν υπάρχει κανόνας, μαθαίνονται ένα-ένα: die Küche (κουζίνα), das Zimmer (δωμάτιο), das Bad (μπάνιο), das Wohnzimmer (σαλόνι).',
             quiz: [
               { prompt: 'η κουζίνα', answer: 'die Küche', options: ['die Küche', 'der Küche', 'das Küche'],
@@ -422,7 +422,7 @@ const COURSES = {
               { prompt: 'το σαλόνι', answer: 'das Wohnzimmer', options: ['das Wohnzimmer', 'die Wohnzimmer', 'der Wohnzimmer'],
                 explanation: '"Wohnen" (κατοικώ) + "Zimmer" (δωμάτιο) = "δωμάτιο διαμονής" — ουδέτερο, όπως όλα τα σύνθετα με "Zimmer".' },
             ] },
-          { id: 'u9l2', title: 'Η καθημερινή μου ρουτίνα', sub: 'My daily routine', xp: 15,
+          { id: 'u9l2', title: 'Η καθημερινή μου ρουτίνα', sub: 'Mein Tagesablauf', xp: 15,
             intro: 'Πολλά γερμανικά ρήματα είναι "διαχωριζόμενα" (trennbare Verben): το πρόθεμα αποκόβεται και πάει στο τέλος της πρότασης. Το "aufstehen" (σηκώνομαι) γίνεται "ich stehe... auf" — το "auf" πάει τελευταίο!',
             quiz: [
               { prompt: 'Ξυπνάω στις εφτά', answer: 'Ich stehe um sieben auf', options: ['Ich stehe um sieben auf', 'Ich stehe auf um sieben', 'Ich aufstehe um sieben'],
@@ -434,7 +434,7 @@ const COURSES = {
               { prompt: 'Μαγειρεύω το βράδυ', answer: 'Ich koche am Abend', options: ['Ich koche am Abend', 'Ich koche im Abend', 'Ich koche zum Abend'],
                 explanation: '"Am Abend" (το βράδυ) — ίδιο μοτίβο πρόθεσης "am" με χρονικές εκφράσεις όπως "am Wochenende" που είδαμε πριν.' },
             ] },
-          { id: 'u9l3', title: 'Σχέδια για το σαββατοκύριακο', sub: 'Weekend plans', xp: 15,
+          { id: 'u9l3', title: 'Σχέδια για το σαββατοκύριακο', sub: 'Wochenendpläne', xp: 15,
             intro: 'Η ρηματική δομή "möchte" + απαρέμφατο στέλνει πάντα το απαρέμφατο στο τέλος της πρότασης: "Ich möchte dich sehen" (θέλω να σε δω) — το "sehen" (βλέπω) πάει τελευταίο.',
             quiz: [
               { prompt: 'Τι κάνεις αυτό το σαββατοκύριακο;', answer: 'Was machst du dieses Wochenende?', options: ['Was machst du dieses Wochenende?', 'Was hast du dieses Wochenende?', 'Wo bist du dieses Wochenende?'],
@@ -449,9 +449,9 @@ const COURSES = {
         ],
       },
       {
-        id: 'u10', title: 'Γραφειοκρατία & έκτακτες καταστάσεις', sub: 'Bureaucracy & emergencies', level: 'A2',
+        id: 'u10', title: 'Γραφειοκρατία & έκτακτες καταστάσεις', sub: 'Bürokratie & Notfälle', level: 'A2',
         lessons: [
-          { id: 'u10l1', title: 'Στο Bürgeramt', sub: 'At the registration office', xp: 20,
+          { id: 'u10l1', title: 'Στο Bürgeramt', sub: 'Im Bürgeramt', xp: 20,
             intro: 'Το "der Termin" (ραντεβού/προθεσμία) είναι αρσενικό, άρα στην αιτιατική γίνεται "einen Termin". Το ρήμα "brauchen" (χρειάζομαι) παίρνει πάντα αντικείμενο σε αιτιατική.',
             quiz: [
               { prompt: 'Έχω ένα ραντεβού', answer: 'Ich habe einen Termin', options: ['Ich habe einen Termin', 'Ich bin ein Termin', 'Ich mache einen Termin'],
@@ -463,7 +463,7 @@ const COURSES = {
               { prompt: 'η ταυτότητα', answer: 'der Ausweis', options: ['der Ausweis', 'die Ausweis', 'das Ausweis'],
                 explanation: '"Der Ausweis" (ταυτότητα/άδεια) — αρσενικό, χωρίς ιδιαίτερο κανόνα, μαθαίνεται απλά.' },
             ] },
-          { id: 'u10l2', title: 'Στον γιατρό', sub: 'At the doctor', xp: 20,
+          { id: 'u10l2', title: 'Στον γιατρό', sub: 'Beim Arzt', xp: 20,
             intro: 'Η έκφραση πόνου στα γερμανικά είναι απρόσωπη: "Es tut weh" (πονάει), κυριολεκτικά "αυτό κάνει κακό". Αν θες να πεις ΠΟΥ πονάει, προσθέτεις "hier" (εδώ) ή το μέρος του σώματος σε δοτική.',
             quiz: [
               { prompt: 'Πονάει εδώ', answer: 'Es tut hier weh', options: ['Es tut hier weh', 'Es ist hier weh', 'Ich tue hier weh'],
@@ -475,7 +475,7 @@ const COURSES = {
               { prompt: 'η συνταγή (φαρμάκου)', answer: 'das Rezept', options: ['das Rezept', 'der Rezept', 'die Rezept'],
                 explanation: '"Das Rezept" σημαίνει και "συνταγή φαρμάκου" ΚΑΙ "συνταγή μαγειρικής" — ουδέτερο και στις δύο περιπτώσεις.' },
             ] },
-          { id: 'u10l3', title: 'Έκτακτη ανάγκη', sub: 'Emergency', xp: 20,
+          { id: 'u10l3', title: 'Έκτακτη ανάγκη', sub: 'Notfall', xp: 20,
             intro: 'Σε επείγουσες καταστάσεις χρησιμοποιείται η προστακτική με "Sie" (επίσημο εσείς): "Rufen Sie..." (καλέστε...). Το ρήμα πάει πρώτο στην πρόταση, όπως στις ερωτήσεις.',
             quiz: [
               { prompt: 'Βοήθεια!', answer: 'Hilfe!', options: ['Hilfe!', 'Achtung!', 'Vorsicht!'],
