@@ -96,4 +96,61 @@ if (!userColumns.some(c => c.name === 'role')) {
   db.exec("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'learner'");
 }
 
+// Safety net: a few tables were added during early development and their
+// schema changed before release. `CREATE TABLE IF NOT EXISTS` only applies
+// to brand-new tables — it silently does nothing if an older-shaped version
+// of the table already exists from that earlier testing, which then breaks
+// every query against it. Detect that mismatch here and recreate the table
+// with the correct shape. Safe to do: these tables only hold recently-added,
+// easily-regenerated data (custom vocab/lessons/cached audio), not core
+// progress data like users or lesson_progress.
+function ensureTableShape(tableName, requiredColumns, createSql) {
+  const cols = db.prepare(`PRAGMA table_info(${tableName})`).all();
+  const hasTable = cols.length > 0;
+  const hasAllColumns = requiredColumns.every(col => cols.some(c => c.name === col));
+  if (hasTable && !hasAllColumns) {
+    db.exec(`DROP TABLE ${tableName}`);
+  }
+  if (!hasTable || !hasAllColumns) {
+    db.exec(createSql);
+  }
+}
+
+ensureTableShape('custom_units', ['unit_json', 'target_lang', 'unit_id', 'updated_at'], `
+  CREATE TABLE custom_units (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    target_lang TEXT NOT NULL,
+    unit_id TEXT NOT NULL,
+    unit_json TEXT NOT NULL,
+    added_by INTEGER NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE(target_lang, unit_id)
+  )
+`);
+
+ensureTableShape('custom_vocab', ['target', 'native', 'cat', 'added_by'], `
+  CREATE TABLE custom_vocab (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    target_lang TEXT NOT NULL,
+    target TEXT NOT NULL,
+    native TEXT NOT NULL,
+    note TEXT,
+    cat TEXT NOT NULL,
+    added_by INTEGER NOT NULL,
+    created_at TEXT NOT NULL
+  )
+`);
+
+ensureTableShape('tts_cache', ['text', 'lang', 'audio_base64'], `
+  CREATE TABLE tts_cache (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    text TEXT NOT NULL,
+    lang TEXT NOT NULL,
+    audio_base64 TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    UNIQUE(text, lang)
+  )
+`);
+
 module.exports = db;
