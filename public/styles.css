@@ -329,6 +329,14 @@ input, button { font-family: inherit; }
   width: 30px; height: 30px; border-radius: 999px; display: flex; align-items: center; justify-content: center;
   cursor: pointer; flex-shrink: 0; border: none;
 }
+.speaker-btn { font-size: 14px; transition: transform .15s ease; }
+.speaker-btn.speaking { animation: speaker-pulse .8s ease-in-out infinite; }
+@keyframes speaker-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.15); } }
+.quiz-feedback-title-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.speaker-btn-inline {
+  width: 32px; height: 32px; border-radius: 999px; border: none; flex-shrink: 0; font-size: 14px; cursor: pointer;
+  background: color-mix(in srgb, var(--color-accent) 14%, var(--c-surface)); color: var(--color-accent);
+}
 
 /* ---------- Profile ---------- */
 .profile-head { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }

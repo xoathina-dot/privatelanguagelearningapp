@@ -12,6 +12,7 @@ const { router: messagesRouter } = require('./routes/messages');
 const { router: tutorRouter } = require('./routes/tutor');
 const { router: profileRouter } = require('./routes/profile');
 const { router: contentImportRouter } = require('./routes/content-import');
+const { router: ttsRouter } = require('./routes/tts');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -20,7 +21,11 @@ app.use(express.json());
 app.use(cookieParser());
 
 app.get('/api/health', (req, res) => {
-  res.json({ ok: true, aiConfigured: !!process.env.ANTHROPIC_API_KEY });
+  res.json({
+    ok: true,
+    aiConfigured: !!process.env.ANTHROPIC_API_KEY,
+    ttsConfigured: !!process.env.GOOGLE_TTS_API_KEY,
+  });
 });
 
 app.use('/api/auth', authRouter);
@@ -30,6 +35,7 @@ app.use('/api/messages', messagesRouter);
 app.use('/api/tutor', tutorRouter);
 app.use('/api/profile', profileRouter);
 app.use('/api/content-import', contentImportRouter);
+app.use('/api/tts', ttsRouter);
 
 app.use(express.static(path.join(__dirname, '..', 'public')));
 

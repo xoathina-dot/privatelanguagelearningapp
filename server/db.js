@@ -62,6 +62,15 @@ db.exec(`
     UNIQUE(target_lang, unit_id)
   );
 
+  CREATE TABLE IF NOT EXISTS tts_cache (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    text TEXT NOT NULL,
+    lang TEXT NOT NULL,
+    audio_base64 TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    UNIQUE(text, lang)
+  );
+
   CREATE TABLE IF NOT EXISTS messages (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     sender_id INTEGER NOT NULL,

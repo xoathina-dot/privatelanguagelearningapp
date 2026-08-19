@@ -32,7 +32,7 @@ function loadCustomVocab(targetLang) {
 router.get('/', requireAuth, (req, res) => {
   const isCompanionView = req.user.role === 'companion';
   const learner = effectiveLearner(req.user);
-  if (!learner) return res.json({ vocab: [], isCompanionView, learnerDisplayName: null, courseLabel: null });
+  if (!learner) return res.json({ vocab: [], isCompanionView, learnerDisplayName: null, courseLabel: null, targetLang: null });
 
   const course = getCourse(learner.target_lang);
   const favs = favoriteIds(req.user.id);
@@ -45,6 +45,7 @@ router.get('/', requireAuth, (req, res) => {
     isCompanionView,
     learnerDisplayName: isCompanionView ? learner.display_name : null,
     courseLabel: course.label,
+    targetLang: learner.target_lang,
   });
 });
 

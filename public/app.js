@@ -25,6 +25,7 @@
     profile: null,
     quiz: null,
     aiConfigured: true,
+    ttsConfigured: true,
     contentImportOpen: false,
     contentImportLang: 'de',
     contentImportDraft: '',
@@ -82,6 +83,7 @@
     try {
       const health = await api('/health');
       state.aiConfigured = !!health.aiConfigured;
+      state.ttsConfigured = !!health.ttsConfigured;
     } catch (e) { /* ignore */ }
 
     try {
@@ -199,7 +201,7 @@
   async function loadVocab() {
     const v = await api('/vocab');
     state.vocab = v.vocab;
-    state.vocabMeta = { isCompanionView: v.isCompanionView, learnerDisplayName: v.learnerDisplayName, courseLabel: v.courseLabel };
+    state.vocabMeta = { isCompanionView: v.isCompanionView, learnerDisplayName: v.learnerDisplayName, courseLabel: v.courseLabel, targetLang: v.targetLang };
   }
 
   async function loadProfile() {
@@ -217,6 +219,7 @@
         xp: data.xp,
         intro: data.intro,
         showingIntro: !!data.intro,
+        targetLang: data.targetLang,
         questions: data.quiz,
         index: 0,
         selected: null,
@@ -265,6 +268,35 @@
       q.selected = null;
     }
     render();
+  }
+
+  const audioCache = {};
+  let currentAudio = null;
+
+  async function speak(text, lang, btnEl) {
+    if (!text || !lang) return;
+    if (btnEl) btnEl.classList.add('speaking');
+    try {
+      const cacheKey = lang + '::' + text;
+      let audioB64 = audioCache[cacheKey];
+      if (!audioB64) {
+        const result = await api('/tts?text=' + encodeURIComponent(text) + '&lang=' + encodeURIComponent(lang));
+        audioB64 = result.audio;
+        audioCache[cacheKey] = audioB64;
+      }
+      if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+      currentAudio = new Audio('data:audio/mp3;base64,' + audioB64);
+      currentAudio.play().catch(() => {});
+      currentAudio.addEventListener('ended', () => { if (btnEl) btnEl.classList.remove('speaking'); });
+    } catch (e) {
+      console.error(e);
+      if (e.data && e.data.error === 'missing_api_key') {
+        state.ttsConfigured = false;
+        render();
+      }
+    } finally {
+      if (btnEl) btnEl.classList.remove('speaking');
+    }
   }
 
   async function toggleVocabFav(vocabId) {
@@ -705,6 +737,7 @@
               <div class="vocab-native">${escapeHtml(v.native)}</div>
               <div class="vocab-note">${escapeHtml(v.note)}</div>
             </div>
+            ${state.ttsConfigured && state.vocabMeta && state.vocabMeta.targetLang ? `<button class="star-btn speaker-btn" data-action="speak-vocab" data-text="${escapeHtml(v.target)}" data-lang="${state.vocabMeta.targetLang}" style="background:color-mix(in srgb, var(--color-text) 6%, transparent);color:var(--c-muted)" title="Vorlesen">🔊</button>` : ''}
             <button class="star-btn" data-action="toggle-fav" data-id="${v.id}" style="background:${v.fav ? 'var(--c-mustard)' : 'color-mix(in srgb, var(--color-text) 6%, transparent)'};color:${v.fav ? '#fff' : 'var(--c-muted)'}">★</button>
             ${v.custom ? `<button class="star-btn" data-action="delete-vocab" data-id="${v.id}" style="background:color-mix(in srgb, var(--color-text) 6%, transparent);color:var(--c-muted)" title="Löschen">✕</button>` : ''}
           </div>
@@ -838,7 +871,10 @@
           </div>
           ${q.selected ? `
             <div class="quiz-feedback">
-              <div class="quiz-feedback-title" style="color:${isCorrectSelected ? 'var(--color-accent)' : 'var(--color-text)'}">${isCorrectSelected ? '✓ Σωστά! Nice!' : '△ Σχεδόν — δες τη σωστή απάντηση'}</div>
+              <div class="quiz-feedback-title-row">
+                <div class="quiz-feedback-title" style="color:${isCorrectSelected ? 'var(--color-accent)' : 'var(--color-text)'}">${isCorrectSelected ? '✓ Σωστά! Nice!' : '△ Σχεδόν — δες τη σωστή απάντηση'}</div>
+                ${state.ttsConfigured && q.targetLang ? `<button class="speaker-btn speaker-btn-inline" data-action="speak-quiz-answer" data-text="${escapeHtml(question.answer)}" data-lang="${q.targetLang}" title="Vorlesen">🔊</button>` : ''}
+              </div>
               ${question.explanation ? `<div class="quiz-feedback-explanation">${escapeHtml(question.explanation)}</div>` : ''}
               <button class="btn-cta" data-action="quiz-next">${q.index + 1 >= q.questions.length ? 'Ολοκλήρωση' : 'Επόμενο'}</button>
             </div>
@@ -895,6 +931,8 @@
       case 'quiz-answer': return selectAnswer(el.getAttribute('data-opt'));
       case 'quiz-next': return quizNext();
       case 'toggle-fav': return toggleVocabFav(el.getAttribute('data-id'));
+      case 'speak-vocab': return speak(el.getAttribute('data-text'), el.getAttribute('data-lang'), el);
+      case 'speak-quiz-answer': return speak(el.getAttribute('data-text'), el.getAttribute('data-lang'), el);
       case 'vocab-filter': return setVocabFilter(el.getAttribute('data-filter'));
       case 'open-add-vocab': return openAddVocab();
       case 'cancel-add-vocab': return cancelAddVocab();

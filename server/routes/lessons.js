@@ -176,6 +176,7 @@ router.get('/:lessonId/quiz', requireAuth, (req, res) => {
     quiz: found.lesson.quiz,
     xp: found.lesson.xp,
     intro: found.lesson.intro || null,
+    targetLang: req.user.target_lang,
   });
 });
 
