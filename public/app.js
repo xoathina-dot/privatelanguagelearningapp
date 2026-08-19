@@ -262,6 +262,7 @@
         state.lessons = { units: result.units, streak: result.streak, xp: result.xp, level: result.level, dailyGoalPct: result.dailyGoalPct, dailyGoalLabel: result.dailyGoalLabel };
         q.done = true;
         q.earnedXp = result.xpEarned || q.xp;
+        q.unitCompleted = result.unitCompleted || null;
       } catch (e) { console.error(e); }
     } else {
       q.index += 1;
@@ -296,6 +297,46 @@
       }
     } finally {
       if (btnEl) btnEl.classList.remove('speaking');
+    }
+  }
+
+  // ---------- Result avatars & confetti ----------
+  const RESULT_TIERS = [
+    { min: 1, avatar: '8', message: 'Τέλεια! Όλα σωστά!', confetti: 'full' },
+    { min: 0.75, avatar: '12', message: 'Πολύ ωραία δουλειά!', confetti: 'light' },
+    { min: 0.5, avatar: '9', message: 'Καλή προσπάθεια!', confetti: null },
+    { min: 0.001, avatar: '11', message: 'Δεν πειράζει, την επόμενη φορά καλύτερα!', confetti: null },
+    { min: 0, avatar: '14', message: 'Δύσκολο μάθημα — ας το ξαναδοκιμάσουμε!', confetti: null },
+  ];
+
+  function getResultTier(correctCount, totalCount) {
+    const pct = totalCount > 0 ? correctCount / totalCount : 0;
+    return RESULT_TIERS.find(t => pct >= t.min) || RESULT_TIERS[RESULT_TIERS.length - 1];
+  }
+
+  const CONFETTI_COLORS = ['#e8735c', '#4a8a7e', '#e0b84a', '#b79fd4', '#f3eee9'];
+
+  function launchConfetti(containerEl, amount) {
+    if (!containerEl) return;
+    const count = amount === 'full' ? 60 : 25;
+    for (let i = 0; i < count; i++) {
+      const piece = document.createElement('div');
+      piece.className = 'confetti-piece';
+      const left = Math.random() * 100;
+      const duration = 1.8 + Math.random() * 1.4;
+      const delay = Math.random() * 0.4;
+      const color = CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)];
+      const rotate = Math.random() * 360;
+      const drift = (Math.random() - 0.5) * 120;
+      piece.style.left = left + '%';
+      piece.style.background = color;
+      piece.style.animationDuration = duration + 's';
+      piece.style.animationDelay = delay + 's';
+      piece.style.setProperty('--drift', drift + 'px');
+      piece.style.transform = `rotate(${rotate}deg)`;
+      if (Math.random() > 0.5) piece.style.borderRadius = '50%';
+      containerEl.appendChild(piece);
+      setTimeout(() => piece.remove(), (duration + delay) * 1000 + 200);
     }
   }
 
@@ -513,6 +554,16 @@
       </div>
     `;
     attachHandlers();
+
+    if (state.quiz && state.quiz.done && !state.quiz._confettiPlayed) {
+      state.quiz._confettiPlayed = true;
+      const tier = getResultTier(state.quiz.correctCount, state.quiz.questions.length);
+      const confettiEl = root.querySelector('.confetti-layer');
+      if (tier.confetti) launchConfetti(confettiEl, tier.confetti);
+      if (state.quiz.unitCompleted) {
+        setTimeout(() => launchConfetti(confettiEl, 'full'), 300);
+      }
+    }
   }
 
   function renderTabContent() {
@@ -820,12 +871,24 @@
   function renderQuiz() {
     const q = state.quiz;
     if (q.done) {
+      const tier = getResultTier(q.correctCount, q.questions.length);
       return `
         <div class="quiz-overlay">
+          <div class="confetti-layer"></div>
           <div class="quiz-result">
+            <img class="quiz-result-avatar" src="/avatars/${tier.avatar}.png" alt="" />
             <div class="quiz-result-xp">+${q.earnedXp} XP</div>
-            <div class="quiz-result-title">Μπράβο!</div>
-            <div class="quiz-result-sub">Ολοκλήρωσες: ${escapeHtml(q.lessonTitle)} — ${q.correctCount}/${q.questions.length} σωστά</div>
+            <div class="quiz-result-title">${escapeHtml(tier.message)}</div>
+            <div class="quiz-result-sub">${escapeHtml(q.lessonTitle)} — ${q.correctCount}/${q.questions.length} σωστά</div>
+            ${q.unitCompleted ? `
+              <div class="unit-complete-banner">
+                <img class="unit-complete-avatar" src="/avatars/13.png" alt="" />
+                <div>
+                  <div class="unit-complete-title">Ολοκλήρωσες την ενότητα!</div>
+                  <div class="unit-complete-sub">${escapeHtml(q.unitCompleted.title)}</div>
+                </div>
+              </div>
+            ` : ''}
             <button class="btn-cta" style="width:auto;padding:12px 22px" data-action="close-quiz">Συνέχεια</button>
           </div>
         </div>

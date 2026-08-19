@@ -129,6 +129,7 @@ router.post('/:lessonId/complete', requireAuth, (req, res) => {
 
   const already = db.prepare('SELECT 1 FROM lesson_progress WHERE user_id = ? AND lesson_id = ?').get(user.id, lessonId);
   const today = todayStr();
+  let unitCompleted = null;
 
   if (!already) {
     db.prepare('INSERT INTO lesson_progress (user_id, lesson_id, completed_at) VALUES (?, ?, ?)')
@@ -147,6 +148,15 @@ router.post('/:lessonId/complete', requireAuth, (req, res) => {
     db.prepare(`
       UPDATE users SET xp = xp + ?, streak = ?, xp_today = ?, last_active_date = ? WHERE id = ?
     `).run(found.lesson.xp, newStreak, newXpToday, today, user.id);
+
+    // Only worth celebrating the very first time all of this unit's lessons
+    // become done — a replay of an already-done lesson (already=true, above)
+    // never re-triggers it, since the unit was already complete before that.
+    const doneNow = completedLessonIds(user.id);
+    const unitJustFinished = found.unit.lessons.every(l => doneNow.has(l.id));
+    if (unitJustFinished) {
+      unitCompleted = { id: found.unit.id, title: found.unit.title };
+    }
   }
 
   const updatedUser = db.prepare('SELECT * FROM users WHERE id = ?').get(user.id);
@@ -161,6 +171,7 @@ router.post('/:lessonId/complete', requireAuth, (req, res) => {
     dailyGoalLabel: `${Math.min(updatedUser.xp_today, DAILY_GOAL_XP)} / ${DAILY_GOAL_XP} XP`,
     xpEarned: already ? 0 : found.lesson.xp,
     isCompanionView: false,
+    unitCompleted,
   });
 });
 
