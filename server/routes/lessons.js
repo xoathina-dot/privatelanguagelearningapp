@@ -175,16 +175,29 @@ router.post('/:lessonId/complete', requireAuth, (req, res) => {
   });
 });
 
+// Fisher-Yates shuffle — returns a new array, doesn't mutate the input.
+// The static content always lists the correct answer first (easiest to
+// write/maintain), so without this the quiz would be trivially guessable.
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 router.get('/:lessonId/quiz', requireAuth, (req, res) => {
   if (req.user.role === 'companion') {
     return res.status(403).json({ error: 'companion_read_only' });
   }
   const found = findLesson(req.user.target_lang, req.params.lessonId);
   if (!found) return res.status(404).json({ error: 'lesson_not_found' });
+  const quiz = found.lesson.quiz.map(q => ({ ...q, options: shuffle(q.options) }));
   res.json({
     lessonTitle: found.lesson.title,
     unitTitle: found.unit.title,
-    quiz: found.lesson.quiz,
+    quiz,
     xp: found.lesson.xp,
     intro: found.lesson.intro || null,
     targetLang: req.user.target_lang,
