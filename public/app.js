@@ -10,13 +10,12 @@
     vocab: [],
     vocabMeta: null,
     vocabFilter: 'all',
-    messages: [],
-    messageDraft: '',
     vocabAddOpen: false,
-    contentImportType: 'lesson',
-    contentImportJson: '',
-    contentImportStatus: null,
-    contentImportLoading: false,
+    vocabDraft: { target: '', native: '', note: '', cat: '' },
+    vocabAddError: null,
+    messages: [],
+    quickReplies: [],
+    messageDraft: '',
     checkResult: null,
     checkLoading: false,
     tutorMessages: [],
@@ -188,6 +187,7 @@
   async function loadMessages() {
     const msgs = await api('/messages');
     state.messages = msgs.messages;
+    state.quickReplies = msgs.quickReplies || [];
   }
 
   async function loadVocab() {
@@ -201,51 +201,22 @@
   }
 
   // ---------- Actions ----------
-  function shuffle(arr) {
-    const a = [...arr];
-    for (let i = a.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [a[i], a[j]] = [a[j], a[i]];
-    }
-    return a;
-  }
-
-  function getLang() {
-    const tl = state.user?.target_lang || 'de';
-    return tl === 'de' ? 'de-DE' : 'el-GR';
-  }
-
-  function speakListening(text, lang) {
-    if (!window.speechSynthesis) return;
-    window.speechSynthesis.cancel();
-    const utt = new SpeechSynthesisUtterance(text);
-    utt.lang = lang;
-    utt.rate = 0.88;
-    window.speechSynthesis.speak(utt);
-  }
-
   async function openLesson(lessonId) {
     try {
       const data = await api('/lessons/' + encodeURIComponent(lessonId) + '/quiz');
-      const firstQ = data.quiz[0];
       state.quiz = {
         lessonId,
         unitTitle: data.unitTitle,
         lessonTitle: data.lessonTitle,
         xp: data.xp,
-        isReview: !!data.isReview,
         questions: data.quiz,
         index: 0,
         selected: null,
         correctCount: 0,
         done: false,
         earnedXp: 0,
-        animationPlayed: false,
-        wordOrderAnswer: [],
-        wordOrderBank: firstQ?.type === 'word-order' ? shuffle(firstQ.words) : [],
       };
       render();
-      if (firstQ?.type === 'listening') speakListening(firstQ.prompt, getLang());
     } catch (e) { console.error(e); }
   }
 
@@ -274,25 +245,13 @@
         });
         state.lessons = { units: result.units, streak: result.streak, xp: result.xp, level: result.level, dailyGoalPct: result.dailyGoalPct, dailyGoalLabel: result.dailyGoalLabel };
         q.done = true;
-        q.animationPlayed = false;
         q.earnedXp = result.xpEarned || q.xp;
       } catch (e) { console.error(e); }
     } else {
       q.index += 1;
       q.selected = null;
-      const nextQ = q.questions[q.index];
-      if (nextQ?.type === 'word-order') {
-        q.wordOrderAnswer = [];
-        q.wordOrderBank = shuffle(nextQ.words);
-      } else {
-        q.wordOrderAnswer = [];
-        q.wordOrderBank = [];
-      }
     }
     render();
-    // Auto-speak listening questions when advancing to them.
-    const curQ = state.quiz?.questions[state.quiz?.index];
-    if (!state.quiz?.done && curQ?.type === 'listening') speakListening(curQ.prompt, getLang());
   }
 
   async function toggleVocabFav(vocabId) {
@@ -304,6 +263,46 @@
   function setVocabFilter(f) {
     state.vocabFilter = f;
     render();
+  }
+
+  function openAddVocab() {
+    state.vocabAddOpen = true;
+    state.vocabDraft = { target: '', native: '', note: '', cat: '' };
+    state.vocabAddError = null;
+    render();
+  }
+
+  function cancelAddVocab() {
+    state.vocabAddOpen = false;
+    state.vocabAddError = null;
+    render();
+  }
+
+  async function submitVocab() {
+    const { target, native, note, cat } = state.vocabDraft;
+    if (!target.trim() || !native.trim() || !cat.trim()) {
+      state.vocabAddError = 'Bitte Wort, Übersetzung und Kategorie ausfüllen.';
+      render();
+      return;
+    }
+    try {
+      await api('/vocab', { method: 'POST', body: { target, native, note, cat } });
+      state.vocabAddOpen = false;
+      state.vocabAddError = null;
+      await loadVocab();
+      render();
+    } catch (e) {
+      state.vocabAddError = 'Konnte nicht gespeichert werden. Bitte nochmal versuchen.';
+      render();
+    }
+  }
+
+  async function deleteVocab(vocabId) {
+    try {
+      await api('/vocab/' + encodeURIComponent(vocabId), { method: 'DELETE' });
+      await loadVocab();
+      render();
+    } catch (e) { console.error(e); }
   }
 
   async function toggleMessageTranslation(msg, el) {
@@ -323,10 +322,10 @@
     }
   }
 
-  async function sendMessage() {
-    const text = state.messageDraft.trim();
+  async function sendMessage(directText) {
+    const text = (directText !== undefined ? directText : state.messageDraft).trim();
     if (!text) return;
-    state.messageDraft = '';
+    if (directText === undefined) state.messageDraft = '';
     state.checkResult = null;
     try {
       const result = await api('/messages', { method: 'POST', body: { text } });
@@ -499,24 +498,21 @@
       ? `<div class="section-row" style="margin-bottom:8px"><h6>Η πρόοδος του/της ${escapeHtml(state.lessons.learnerDisplayName)}</h6></div>`
       : '';
     return heading + state.lessons.units.map(unit => `
-      <div class="unit-block ${unit.isReview ? 'unit-block-review' : ''}">
+      <div class="unit-block">
         <div class="unit-head">
           <div>
-            <div class="unit-title">${unit.isReview ? '↺ ' : ''}${escapeHtml(unit.title)}</div>
+            <div class="unit-title">${escapeHtml(unit.title)}</div>
             <div class="unit-sub">${escapeHtml(unit.sub)}</div>
           </div>
-          <span class="unit-level ${unit.isReview ? 'unit-level-review' : ''}">${escapeHtml(unit.level)}</span>
+          <span class="unit-level">${escapeHtml(unit.level)}</span>
         </div>
         <div class="lesson-list">
           ${unit.lessons.map(lesson => {
-            const isReview = !!lesson.isReview;
-            const dotContent = isReview
-              ? (lesson.state === 'done' ? '✓' : '↺')
-              : (lesson.state === 'done' ? '✓' : lesson.state === 'current' ? '▸' : '•');
+            const dotContent = lesson.state === 'done' ? '✓' : lesson.state === 'current' ? '▸' : '•';
             const dotClass = lesson.state === 'done'
               ? 'background:color-mix(in srgb, var(--color-accent) 18%, transparent);color:var(--color-accent-700)'
               : lesson.state === 'current'
-                ? (isReview ? 'background:var(--c-lavender);color:#fff' : 'background:var(--color-accent);color:#fff')
+                ? 'background:var(--color-accent);color:#fff'
                 : 'background:color-mix(in srgb, var(--color-text) 8%, transparent);color:var(--c-muted)';
             const clickable = !isCompanion && (lesson.state === 'done' || lesson.state === 'current');
             return `
@@ -526,9 +522,7 @@
                   <div class="lesson-title">${escapeHtml(lesson.title)}</div>
                   <div class="lesson-sub">${escapeHtml(lesson.sub)}</div>
                 </div>
-                ${isReview
-                  ? `<span class="lesson-tag lesson-tag-review">↺ Wiederholung</span>`
-                  : `<span class="lesson-tag">+${lesson.xp} XP</span>`}
+                <span class="lesson-tag">+${lesson.xp} XP</span>
               </button>
             `;
           }).join('')}
@@ -563,16 +557,7 @@
     `;
   }
 
-  const COMPANION_CHIPS = [
-    'Bravo, weiter so! 💪',
-    'Ich bin stolz auf dich 🌟',
-    'Lust auf eine kleine Deutsch-Runde heute Abend? 😊',
-    'Du schaffst das! 🎉',
-    'Wie war dein heutiges Üben? ✨',
-  ];
-
   function renderMessages() {
-    const isCompanion = state.user && state.user.role === 'companion';
     return `
       <div class="chat-list">
         ${state.messages.map(m => `
@@ -590,9 +575,11 @@
           <div class="text">${escapeHtml(state.checkResult)}</div>
         </div>
       ` : ''}
-      ${isCompanion ? `
-        <div class="chip-row" style="padding:6px 0 2px">
-          ${COMPANION_CHIPS.map(c => `<button class="chip" data-action="msg-chip" data-text="${escapeHtml(c)}">${escapeHtml(c)}</button>`).join('')}
+      ${state.quickReplies.length ? `
+        <div class="chip-row">
+          ${state.quickReplies.map(q => `
+            <button class="chip vocab-chip" data-action="quick-reply" data-text="${escapeHtml(q)}">${escapeHtml(q)}</button>
+          `).join('')}
         </div>
       ` : ''}
       <div class="composer">
@@ -604,53 +591,29 @@
   }
 
   function renderVocab() {
-    const filters = [
+    const baseFilters = [
       { id: 'all', label: 'Όλα' },
       { id: 'fav', label: 'Αγαπημένα' },
-      { id: 'Δικά μας', label: 'Δικά μας' },
       { id: 'Personal', label: 'Προσωπικά' },
       { id: 'Family', label: 'Οικογένεια' },
       { id: 'Everyday', label: 'Καθημερινά' },
       { id: 'Phrases', label: 'Φράσεις' },
       { id: 'Life', label: 'Γερμανία' },
     ];
-    const catColor = {
-      Personal: 'var(--c-coral)', Everyday: 'var(--color-accent)',
-      Phrases: 'var(--c-lavender)', Family: 'var(--c-mustard)',
-      Life: 'var(--color-accent-700)', 'Δικά μας': 'var(--c-lavender)',
-    };
+    const knownCatIds = new Set(baseFilters.map(f => f.id));
+    // Custom vocab can carry any free-text category — surface those as extra
+    // filter chips too, so newly added categories are actually browsable.
+    const extraCats = [...new Set(state.vocab.map(v => v.cat).filter(c => c && !knownCatIds.has(c)))];
+    const filters = [...baseFilters, ...extraCats.map(c => ({ id: c, label: c }))];
+    const catColor = { Personal: 'var(--c-coral)', Everyday: 'var(--color-accent)', Phrases: 'var(--c-lavender)', Family: 'var(--c-mustard)', Life: 'var(--color-accent-700)' };
     const list = state.vocab.filter(v => {
       if (state.vocabFilter === 'all') return true;
       if (state.vocabFilter === 'fav') return v.fav;
       return v.cat === state.vocabFilter;
     });
     return `
-      <div class="section-row" style="margin-bottom:4px">
-        ${state.vocabMeta && state.vocabMeta.isCompanionView && state.vocabMeta.learnerDisplayName
-          ? `<h6>Λεξιλόγιο: ${escapeHtml(state.vocabMeta.learnerDisplayName)}</h6>`
-          : '<h6>Λεξιλόγιο</h6>'}
-        <button class="chip" style="padding:4px 12px;font-size:13px" data-action="vocab-add-open">+ Neu</button>
-      </div>
-      ${state.vocabAddOpen ? `
-        <div class="card" style="margin-bottom:12px;padding:14px">
-          <div style="display:flex;flex-direction:column;gap:8px">
-            <input class="input" id="vocab-input-target" placeholder="Zielsprache-Wort (z.B. das Haus)" />
-            <input class="input" id="vocab-input-native" placeholder="Übersetzung / Μετάφραση" />
-            <input class="input" id="vocab-input-note" placeholder="Notiz (optional)" />
-            <select class="input" id="vocab-input-cat">
-              <option value="Δικά μας">Δικά μας (Standard)</option>
-              <option value="Personal">Προσωπικά</option>
-              <option value="Family">Οικογένεια</option>
-              <option value="Everyday">Καθημερινά</option>
-              <option value="Phrases">Φράσεις</option>
-              <option value="Life">Γερμανία</option>
-            </select>
-            <div style="display:flex;gap:8px">
-              <button class="btn-primary" style="flex:1;padding:10px 0" data-action="vocab-add-submit">Speichern</button>
-              <button class="btn-cancel" data-action="vocab-add-cancel">✕</button>
-            </div>
-          </div>
-        </div>
+      ${state.vocabMeta && state.vocabMeta.isCompanionView && state.vocabMeta.learnerDisplayName ? `
+        <div class="section-row" style="margin-bottom:8px"><h6>Λεξιλόγιο: ${escapeHtml(state.vocabMeta.learnerDisplayName)}</h6></div>
       ` : ''}
       <div class="chip-row">
         ${filters.map(f => `
@@ -664,15 +627,31 @@
             <div class="vocab-body">
               <div class="vocab-target">${escapeHtml(v.target)}</div>
               <div class="vocab-native">${escapeHtml(v.native)}</div>
-              <div class="vocab-note">${escapeHtml(v.note)}${v.isCustom && v.addedByName ? (v.note ? ' · ' : '') + '+ ' + escapeHtml(v.addedByName) : ''}</div>
+              <div class="vocab-note">${escapeHtml(v.note)}</div>
             </div>
-            <div style="display:flex;flex-direction:column;gap:4px;align-items:center">
-              <button class="star-btn" data-action="toggle-fav" data-id="${v.id}" style="background:${v.fav ? 'var(--c-mustard)' : 'color-mix(in srgb, var(--color-text) 6%, transparent)'};color:${v.fav ? '#fff' : 'var(--c-muted)'}">★</button>
-              ${v.isCustom ? `<button class="trash-btn" data-action="vocab-delete" data-id="${v.id.replace('custom_', '')}">✕</button>` : ''}
-            </div>
+            <button class="star-btn" data-action="toggle-fav" data-id="${v.id}" style="background:${v.fav ? 'var(--c-mustard)' : 'color-mix(in srgb, var(--color-text) 6%, transparent)'};color:${v.fav ? '#fff' : 'var(--c-muted)'}">★</button>
+            ${v.custom ? `<button class="star-btn" data-action="delete-vocab" data-id="${v.id}" style="background:color-mix(in srgb, var(--color-text) 6%, transparent);color:var(--c-muted)" title="Löschen">✕</button>` : ''}
           </div>
         `).join('')}
         ${!list.length ? '<div class="empty-state">Keine Einträge in diesem Filter.</div>' : ''}
+      </div>
+
+      <div class="vocab-add">
+        ${state.vocabAddOpen ? `
+          <div class="vocab-add-form">
+            <input type="text" placeholder="Wort/Phrase (Zielsprache)" data-field="target" value="${escapeHtml(state.vocabDraft.target)}" />
+            <input type="text" placeholder="Übersetzung" data-field="native" value="${escapeHtml(state.vocabDraft.native)}" />
+            <input type="text" placeholder="Notiz (optional)" data-field="note" value="${escapeHtml(state.vocabDraft.note)}" />
+            <input type="text" placeholder="Kategorie (z.B. Arbeit)" data-field="cat" value="${escapeHtml(state.vocabDraft.cat)}" />
+            ${state.vocabAddError ? `<div class="vocab-add-error">${escapeHtml(state.vocabAddError)}</div>` : ''}
+            <div class="vocab-add-actions">
+              <button class="btn-cta" style="width:auto;padding:10px 18px" data-action="submit-vocab">Speichern</button>
+              <button class="chip" data-action="cancel-add-vocab">Abbrechen</button>
+            </div>
+          </div>
+        ` : `
+          <button class="btn-cta" style="width:auto;padding:10px 18px" data-action="open-add-vocab">+ Vokabel hinzufügen</button>
+        `}
       </div>
     `;
   }
@@ -704,26 +683,6 @@
           <button class="toggle ${p.notificationsEnabled ? 'on' : ''}" data-action="toggle-notifications"><span class="knob"></span></button>
         </div>
       </div>
-      <div class="profile-section-label">Content hinzufügen</div>
-      <div class="import-section">
-        <div class="import-type-row">
-          <label class="import-type-label ${state.contentImportType === 'lesson' ? 'selected' : ''}">
-            <input type="radio" name="importtype" value="lesson" ${state.contentImportType === 'lesson' ? 'checked' : ''}> Lektion
-          </label>
-          <label class="import-type-label ${state.contentImportType === 'unit' ? 'selected' : ''}">
-            <input type="radio" name="importtype" value="unit" ${state.contentImportType === 'unit' ? 'checked' : ''}> Neue Einheit
-          </label>
-        </div>
-        <div class="import-hint">${state.contentImportType === 'lesson'
-          ? '{ "unitId": "u5", "title": "…", "sub": "…", "xp": 15, "quiz": [{"prompt":"…","translation":"…","answer":"…","options":["…","…"]}] }'
-          : '{ "title": "…", "sub": "…", "level": "A1", "lessons": [{"title":"…","sub":"…","xp":15,"quiz":[{"prompt":"…","translation":"…","answer":"…","options":["…","…"]}]}] }'
-        }</div>
-        <textarea class="input import-textarea" id="import-json" placeholder="JSON hier einfügen…" spellcheck="false">${escapeHtml(state.contentImportJson)}</textarea>
-        ${state.contentImportStatus?.error ? `<div class="import-status import-error">${escapeHtml(state.contentImportStatus.error)}</div>` : ''}
-        ${state.contentImportStatus?.ok ? `<div class="import-status import-ok">✓ Erfolgreich importiert!</div>` : ''}
-        <button class="btn-primary" style="width:100%;margin-top:6px;padding:12px" data-action="content-import" ${state.contentImportLoading ? 'disabled' : ''}>${state.contentImportLoading ? '…' : 'Einfügen'}</button>
-      </div>
-      <button class="btn-export" data-action="export-progress">Fortschritt exportieren ↓</button>
       <button class="btn-logout" data-action="logout">Abmelden</button>
     `;
   }
@@ -734,10 +693,8 @@
       return `
         <div class="quiz-overlay">
           <div class="quiz-result">
-            <div id="confetti-wrap"></div>
-            <div class="mascot-slot"><!-- MASCOT_PLACEHOLDER --></div>
-            <div class="quiz-result-xp">+<span id="xp-count">0</span> XP</div>
-            <div class="quiz-result-title">Μπράβο! 🎉</div>
+            <div class="quiz-result-xp">+${q.earnedXp} XP</div>
+            <div class="quiz-result-title">Μπράβο!</div>
             <div class="quiz-result-sub">Ολοκλήρωσες: ${escapeHtml(q.lessonTitle)} — ${q.correctCount}/${q.questions.length} σωστά</div>
             <button class="btn-cta" style="width:auto;padding:12px 22px" data-action="close-quiz">Συνέχεια</button>
           </div>
@@ -745,84 +702,8 @@
       `;
     }
     const question = q.questions[q.index];
-    const type = question.type || 'multiple-choice';
     const progressPct = Math.round(((q.index + (q.selected ? 1 : 0)) / q.questions.length) * 100);
-
-    // Shared feedback block (used by all types once answered).
-    const isCorrect = type === 'word-order'
-      ? q.selected === '__correct__'
-      : q.selected === question.answer;
-    const feedbackBlock = q.selected ? `
-      <div class="quiz-feedback">
-        <div class="quiz-feedback-title" style="color:${isCorrect ? 'var(--color-accent)' : 'var(--color-text)'}">
-          ${isCorrect ? '✓ Σωστά! Nice!' : (type === 'word-order'
-            ? `△ Σχεδόν — ${escapeHtml(question.correctOrder.join(' '))}`
-            : '△ Σχεδόν — δες τη σωστή απάντηση')}
-        </div>
-        <div class="quiz-feedback-sub">${escapeHtml(question.translation)}</div>
-        <button class="btn-cta" data-action="quiz-next">${q.index + 1 >= q.questions.length ? 'Ολοκλήρωση' : 'Επόμενο'}</button>
-      </div>
-    ` : '';
-
-    let questionBody = '';
-
-    if (type === 'word-order') {
-      questionBody = `
-        <div class="quiz-instruction">Τοποθέτησε τις λέξεις στη σωστή σειρά / Ordne die Wörter</div>
-        <div class="quiz-prompt">${escapeHtml(question.prompt)}</div>
-        <div class="wo-answer-area ${q.selected ? (isCorrect ? 'wo-correct' : 'wo-wrong') : ''}">
-          ${q.wordOrderAnswer.map((w, i) => `
-            <button class="wo-tile wo-placed" data-action="wo-tap-answer" data-idx="${i}" ${q.selected ? 'disabled' : ''}>${escapeHtml(w)}</button>
-          `).join('')}
-          ${!q.wordOrderAnswer.length ? `<span class="wo-placeholder">Tippe die Wörter an…</span>` : ''}
-        </div>
-        <div class="wo-bank">
-          ${q.wordOrderBank.map((w, i) => `
-            <button class="wo-tile" data-action="wo-tap-bank" data-idx="${i}" ${q.selected ? 'disabled' : ''}>${escapeHtml(w)}</button>
-          `).join('')}
-        </div>
-        ${!q.selected && q.wordOrderAnswer.length > 0 ? `
-          <button class="btn-cta" data-action="wo-submit" style="margin-top:8px">Prüfen ✓</button>
-        ` : ''}
-        ${feedbackBlock}
-      `;
-    } else if (type === 'listening') {
-      questionBody = `
-        <div class="quiz-instruction">Άκουσε και επίλεξε / Höre zu und wähle</div>
-        <div class="quiz-listen-wrap">
-          <button class="btn-listen" data-action="listen-replay">🔊 Ξανάκουσε / Nochmal</button>
-        </div>
-        <div class="quiz-options">
-          ${question.options.map(opt => {
-            let cls = '';
-            if (q.selected) {
-              if (opt === question.answer) cls = 'correct';
-              else if (opt === q.selected) cls = 'wrong';
-            }
-            return `<button class="quiz-option ${cls}" data-action="quiz-answer" data-opt="${escapeHtml(opt)}" ${q.selected ? 'disabled' : ''}>${escapeHtml(opt)}</button>`;
-          }).join('')}
-        </div>
-        ${feedbackBlock}
-      `;
-    } else {
-      // Default: multiple-choice
-      questionBody = `
-        <div class="quiz-instruction">Μετάφρασε στα γερμανικά / Übersetze</div>
-        <div class="quiz-prompt">${escapeHtml(question.prompt)}</div>
-        <div class="quiz-options">
-          ${question.options.map(opt => {
-            let cls = '';
-            if (q.selected) {
-              if (opt === question.answer) cls = 'correct';
-              else if (opt === q.selected) cls = 'wrong';
-            }
-            return `<button class="quiz-option ${cls}" data-action="quiz-answer" data-opt="${escapeHtml(opt)}" ${q.selected ? 'disabled' : ''}>${escapeHtml(opt)}</button>`;
-          }).join('')}
-        </div>
-        ${feedbackBlock}
-      `;
-    }
-
+    const isCorrectSelected = q.selected === question.answer;
     return `
       <div class="quiz-overlay">
         <div class="quiz-head">
@@ -831,7 +712,25 @@
           <div class="quiz-step-label">${q.index + 1}/${q.questions.length}</div>
         </div>
         <div class="quiz-body">
-          ${questionBody}
+          <div class="quiz-instruction">Μετάφρασε στα γερμανικά / Übersetze</div>
+          <div class="quiz-prompt">${escapeHtml(question.prompt)}</div>
+          <div class="quiz-options">
+            ${question.options.map(opt => {
+              let cls = '';
+              if (q.selected) {
+                if (opt === question.answer) cls = 'correct';
+                else if (opt === q.selected) cls = 'wrong';
+              }
+              return `<button class="quiz-option ${cls}" data-action="quiz-answer" data-opt="${escapeHtml(opt)}" ${q.selected ? 'disabled' : ''}>${escapeHtml(opt)}</button>`;
+            }).join('')}
+          </div>
+          ${q.selected ? `
+            <div class="quiz-feedback">
+              <div class="quiz-feedback-title" style="color:${isCorrectSelected ? 'var(--color-accent)' : 'var(--color-text)'}">${isCorrectSelected ? '✓ Σωστά! Nice!' : '△ Σχεδόν — δες τη σωστή απάντηση'}</div>
+              <div class="quiz-feedback-sub">${escapeHtml(question.translation)}</div>
+              <button class="btn-cta" data-action="quiz-next">${q.index + 1 >= q.questions.length ? 'Ολοκλήρωση' : 'Επόμενο'}</button>
+            </div>
+          ` : ''}
         </div>
       </div>
     `;
@@ -860,60 +759,9 @@
       messageInput.focus();
       messageInput.setSelectionRange(messageInput.value.length, messageInput.value.length);
     }
-    const vocabTarget = document.getElementById('vocab-input-target');
-    if (vocabTarget) vocabTarget.focus();
-
-    // Content import: radio buttons + textarea.
-    root.querySelectorAll('input[name="importtype"]').forEach(r => {
-      r.addEventListener('change', (e) => {
-        state.contentImportType = e.target.value;
-        state.contentImportJson = '';
-        state.contentImportStatus = null;
-        render();
-      });
+    root.querySelectorAll('.vocab-add-form [data-field]').forEach(el => {
+      el.addEventListener('input', (e) => { state.vocabDraft[el.getAttribute('data-field')] = e.target.value; });
     });
-    const importTA = document.getElementById('import-json');
-    if (importTA) importTA.addEventListener('input', (e) => { state.contentImportJson = e.target.value; });
-
-    // Block A: fire confetti + XP count-up exactly once when result screen appears.
-    if (state.quiz?.done && !state.quiz.animationPlayed) {
-      state.quiz.animationPlayed = true;
-      runConfetti();
-      runXpCountUp(state.quiz.earnedXp);
-    }
-  }
-
-  function runConfetti() {
-    const wrap = document.getElementById('confetti-wrap');
-    if (!wrap) return;
-    const colors = ['var(--color-accent)', 'var(--c-coral)', 'var(--c-lavender)', 'var(--c-mustard)', '#86efac', '#67e8f9'];
-    for (let i = 0; i < 26; i++) {
-      const piece = document.createElement('div');
-      piece.className = 'confetti-piece';
-      piece.style.cssText = [
-        `left:${Math.random() * 100}%`,
-        `background:${colors[i % colors.length]}`,
-        `width:${4 + Math.random() * 7}px`,
-        `height:${4 + Math.random() * 7}px`,
-        `border-radius:${Math.random() > 0.5 ? '50%' : '2px'}`,
-        `animation-delay:${(Math.random() * 0.45).toFixed(2)}s`,
-        `animation-duration:${(0.9 + Math.random() * 0.7).toFixed(2)}s`,
-      ].join(';');
-      wrap.appendChild(piece);
-    }
-  }
-
-  function runXpCountUp(target) {
-    if (!target) return;
-    const el = document.getElementById('xp-count');
-    if (!el) return;
-    let cur = 0;
-    const step = Math.max(1, Math.ceil(target / 20));
-    const timer = setInterval(() => {
-      cur = Math.min(cur + step, target);
-      el.textContent = cur;
-      if (cur >= target) clearInterval(timer);
-    }, 38);
   }
 
   function handleAction(action, el) {
@@ -925,41 +773,12 @@
       case 'close-quiz': return closeQuiz();
       case 'quiz-answer': return selectAnswer(el.getAttribute('data-opt'));
       case 'quiz-next': return quizNext();
-      case 'wo-tap-bank': {
-        const q = state.quiz; if (!q || q.selected) return;
-        const idx = parseInt(el.getAttribute('data-idx'));
-        const word = q.wordOrderBank[idx];
-        q.wordOrderBank = q.wordOrderBank.filter((_, i) => i !== idx);
-        q.wordOrderAnswer = [...q.wordOrderAnswer, word];
-        render(); return;
-      }
-      case 'wo-tap-answer': {
-        const q = state.quiz; if (!q || q.selected) return;
-        const idx = parseInt(el.getAttribute('data-idx'));
-        const word = q.wordOrderAnswer[idx];
-        q.wordOrderAnswer = q.wordOrderAnswer.filter((_, i) => i !== idx);
-        q.wordOrderBank = [...q.wordOrderBank, word];
-        render(); return;
-      }
-      case 'wo-submit': {
-        const q = state.quiz; if (!q || q.selected) return;
-        const answer = q.wordOrderAnswer.join(' ');
-        const correct = answer === q.questions[q.index].correctOrder.join(' ');
-        q.selected = correct ? '__correct__' : '__wrong__';
-        if (correct) q.correctCount++;
-        render(); return;
-      }
-      case 'listen-replay': {
-        const q = state.quiz;
-        if (q) speakListening(q.questions[q.index].prompt, getLang());
-        return;
-      }
       case 'toggle-fav': return toggleVocabFav(el.getAttribute('data-id'));
       case 'vocab-filter': return setVocabFilter(el.getAttribute('data-filter'));
-      case 'vocab-add-open': { state.vocabAddOpen = true; render(); return; }
-      case 'vocab-add-cancel': { state.vocabAddOpen = false; render(); return; }
-      case 'vocab-add-submit': return addCustomVocab();
-      case 'vocab-delete': return deleteCustomVocab(el.getAttribute('data-id'));
+      case 'open-add-vocab': return openAddVocab();
+      case 'cancel-add-vocab': return cancelAddVocab();
+      case 'submit-vocab': return submitVocab();
+      case 'delete-vocab': return deleteVocab(el.getAttribute('data-id'));
       case 'translate-msg': {
         const id = Number(el.getAttribute('data-id'));
         const msg = state.messages.find(m => m.id === id);
@@ -967,19 +786,11 @@
         return;
       }
       case 'send-message': return sendMessage();
+      case 'quick-reply': return sendMessage(el.getAttribute('data-text'));
       case 'check-message': return checkMessageDraft();
-      case 'msg-chip': {
-        state.messageDraft = el.getAttribute('data-text');
-        render();
-        const inp = document.getElementById('message-input');
-        if (inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }
-        return;
-      }
       case 'tutor-send': return sendTutorText(state.tutorDraft);
       case 'tutor-chip': return sendTutorText(el.getAttribute('data-text'));
       case 'toggle-notifications': return toggleNotifications();
-      case 'content-import': return importContent();
-      case 'export-progress': return exportProgress();
       case 'logout': return logout();
       default: return;
     }
@@ -989,73 +800,6 @@
     const result = await api('/profile/toggle-notifications', { method: 'POST' });
     state.profile.notificationsEnabled = result.notificationsEnabled;
     render();
-  }
-
-  async function addCustomVocab() {
-    const target = (document.getElementById('vocab-input-target')?.value || '').trim();
-    const native = (document.getElementById('vocab-input-native')?.value || '').trim();
-    if (!target || !native) return;
-    const note = (document.getElementById('vocab-input-note')?.value || '').trim();
-    const cat = document.getElementById('vocab-input-cat')?.value || 'Δικά μας';
-    try {
-      await api('/vocab/custom', { method: 'POST', body: { targetText: target, nativeText: native, note, cat } });
-      state.vocabAddOpen = false;
-      await loadVocab();
-      render();
-    } catch (e) { console.error(e); }
-  }
-
-  async function deleteCustomVocab(id) {
-    try {
-      await api('/vocab/custom/' + encodeURIComponent(id), { method: 'DELETE' });
-      await loadVocab();
-      render();
-    } catch (e) { console.error(e); }
-  }
-
-  async function importContent() {
-    const json = (document.getElementById('import-json')?.value ?? state.contentImportJson).trim();
-    if (!json) {
-      state.contentImportStatus = { error: 'Bitte JSON einfügen.' };
-      render(); return;
-    }
-    let data;
-    try { data = JSON.parse(json); }
-    catch (e) {
-      state.contentImportStatus = { error: 'Ungültiges JSON: ' + e.message };
-      render(); return;
-    }
-    state.contentImportLoading = true;
-    state.contentImportStatus = null;
-    render();
-    try {
-      await api('/content/import', { method: 'POST', body: { type: state.contentImportType, data } });
-      state.contentImportStatus = { ok: true };
-      state.contentImportJson = '';
-      state.contentImportLoading = false;
-      // Invalidate lessons cache so next tab-switch reloads the updated list.
-      state.lessons = null;
-      render();
-    } catch (e) {
-      state.contentImportStatus = { error: e.message };
-      state.contentImportLoading = false;
-      render();
-    }
-  }
-
-  async function exportProgress() {
-    try {
-      const data = await api('/profile/export');
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'fortschritt-' + (state.user ? state.user.username : 'export') + '.json';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (e) { console.error(e); }
   }
 
   if ('serviceWorker' in navigator) {

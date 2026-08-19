@@ -2,6 +2,7 @@ const express = require('express');
 const db = require('../db');
 const { requireAuth } = require('../auth');
 const { translateText, checkGrammar } = require('../ai');
+const { MESSAGE_QUICK_REPLIES } = require('../content');
 
 const router = express.Router();
 
@@ -15,11 +16,14 @@ function shape(msg, currentUserId) {
 }
 
 router.get('/', requireAuth, (req, res) => {
-  if (!req.user.partner_id) return res.json({ messages: [] });
+  if (!req.user.partner_id) return res.json({ messages: [], quickReplies: [] });
   const rows = db.prepare(`
     SELECT * FROM messages WHERE sender_id = ? OR sender_id = ? ORDER BY id ASC
   `).all(req.user.id, req.user.partner_id);
-  res.json({ messages: rows.map(m => shape(m, req.user.id)) });
+  const quickReplies = req.user.role === 'companion'
+    ? (MESSAGE_QUICK_REPLIES[req.user.native_lang] || [])
+    : [];
+  res.json({ messages: rows.map(m => shape(m, req.user.id)), quickReplies });
 });
 
 router.post('/', requireAuth, (req, res) => {

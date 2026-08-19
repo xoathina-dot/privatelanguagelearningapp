@@ -306,53 +306,18 @@ input, button { font-family: inherit; }
 .vocab-target { font-weight: 600; font-size: 14px; }
 .vocab-native { font-size: 12px; color: var(--c-muted); margin-top: 1px; }
 .vocab-note { font-size: 10.5px; color: var(--c-muted); opacity: .75; margin-top: 1px; }
-.trash-btn {
-  width: 26px; height: 26px; border-radius: 999px; border: none;
-  background: color-mix(in srgb, var(--c-coral) 14%, transparent);
-  color: var(--c-coral); cursor: pointer; font-size: 11px;
-  display: flex; align-items: center; justify-content: center;
+.vocab-add { margin-top: 14px; }
+.vocab-add-form {
+  display: flex; flex-direction: column; gap: 10px;
+  background: var(--c-surface); border-radius: 20px; padding: 16px; box-shadow: var(--shadow-sm);
 }
-.btn-cancel {
-  padding: 10px 16px; border-radius: 999px; border: none;
-  background: color-mix(in srgb, var(--color-text) 8%, transparent);
-  color: var(--color-text); cursor: pointer; font-size: 14px;
+.vocab-add-form input {
+  border: none; border-radius: 14px; padding: 12px 14px; font-size: 14px;
+  background: color-mix(in srgb, var(--color-text) 6%, transparent); color: var(--color-text); outline: none;
 }
-/* ── Content import section (Profile tab) ────────────── */
-.profile-section-label {
-  font-size: 11px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: .08em; color: var(--c-muted); margin: 18px 0 8px;
-}
-.import-section { display: flex; flex-direction: column; gap: 6px; }
-.import-type-row { display: flex; gap: 8px; }
-.import-type-label {
-  flex: 1; display: flex; align-items: center; gap: 6px;
-  padding: 9px 14px; border-radius: 12px; cursor: pointer;
-  font-size: 14px; font-weight: 500;
-  border: 1.5px solid color-mix(in srgb, var(--color-text) 12%, transparent);
-  transition: border-color .15s, color .15s;
-}
-.import-type-label.selected { border-color: var(--color-accent); color: var(--color-accent); }
-.import-type-label input[type="radio"] { accent-color: var(--color-accent); flex-shrink: 0; }
-.import-hint {
-  font-size: 11px; font-family: monospace; color: var(--c-muted);
-  padding: 6px 10px; border-radius: 8px; overflow: hidden;
-  white-space: nowrap; text-overflow: ellipsis;
-  background: color-mix(in srgb, var(--color-text) 5%, transparent);
-}
-.import-textarea {
-  min-height: 130px; font-family: monospace; font-size: 12px;
-  resize: vertical; white-space: pre; overflow: auto; line-height: 1.5;
-}
-.import-status { font-size: 13px; padding: 8px 12px; border-radius: 10px; }
-.import-ok    { background: color-mix(in srgb, var(--color-accent) 12%, transparent); color: var(--color-accent-700); }
-.import-error { background: color-mix(in srgb, var(--c-coral) 12%, transparent); color: var(--c-coral); }
-
-.btn-export {
-  display: block; width: 100%; margin-top: 10px; padding: 13px 16px;
-  border-radius: 16px; border: none; text-align: left;
-  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
-  color: var(--color-accent); cursor: pointer; font-size: 14px; font-weight: 600;
-}
+.vocab-add-form input:focus { box-shadow: 0 0 0 2px #4a8a7e55; }
+.vocab-add-error { font-size: 12px; color: var(--c-coral); }
+.vocab-add-actions { display: flex; gap: 10px; align-items: center; }
 .star-btn {
   width: 30px; height: 30px; border-radius: 999px; display: flex; align-items: center; justify-content: center;
   cursor: pointer; flex-shrink: 0; border: none;
@@ -427,63 +392,6 @@ input, button { font-family: inherit; }
 .quiz-feedback { padding-top: 20px; display: flex; flex-direction: column; gap: 10px; }
 .quiz-feedback-title { font-family: var(--font-heading); font-weight: 800; font-size: 15px; }
 .quiz-feedback-sub { font-size: 12px; color: var(--c-muted); }
-
-/* ── Confetti (Block A) ────────────────────────────────── */
-#confetti-wrap {
-  position: absolute; inset: 0; pointer-events: none;
-  overflow: hidden; border-radius: 24px;
-}
-.confetti-piece {
-  position: absolute; top: -12px;
-  animation: confetti-fall linear both;
-}
-@keyframes confetti-fall {
-  0%   { transform: translateY(0)     rotate(0deg);   opacity: 1; }
-  75%  { opacity: 1; }
-  100% { transform: translateY(320px) rotate(400deg); opacity: 0; }
-}
-.mascot-slot { height: 56px; /* MASCOT_PLACEHOLDER — swap for <img> later */ }
-
-/* ── Review lesson styles (Block B) ───────────────────── */
-.unit-block-review { opacity: 0.95; }
-.unit-block-review .unit-head { border-left: 3px solid var(--c-lavender); padding-left: 8px; }
-.unit-level-review { background: color-mix(in srgb, var(--c-lavender) 18%, transparent) !important; color: var(--c-lavender) !important; }
-.lesson-tag-review {
-  background: color-mix(in srgb, var(--c-lavender) 16%, transparent);
-  color: var(--c-lavender); font-size: 11px; font-weight: 600;
-  padding: 3px 8px; border-radius: 999px;
-}
-
-/* ── Word-order tiles (Block C) ───────────────────────── */
-.wo-answer-area {
-  min-height: 48px; border: 2px dashed color-mix(in srgb, var(--color-text) 18%, transparent);
-  border-radius: 14px; padding: 8px 10px;
-  display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
-  margin-bottom: 10px; transition: border-color .2s;
-}
-.wo-answer-area.wo-correct { border-color: var(--color-accent); background: color-mix(in srgb, var(--color-accent) 6%, transparent); }
-.wo-answer-area.wo-wrong   { border-color: var(--c-coral);        background: color-mix(in srgb, var(--c-coral)        6%, transparent); }
-.wo-placeholder { color: var(--c-muted); font-size: 14px; }
-.wo-bank { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; min-height: 36px; }
-.wo-tile {
-  padding: 7px 13px; border-radius: 10px; border: 1.5px solid color-mix(in srgb, var(--color-text) 18%, transparent);
-  background: var(--c-surface); color: var(--color-text);
-  font-size: 15px; font-weight: 500; cursor: pointer; transition: background .15s, transform .1s;
-}
-.wo-tile:active { transform: scale(.95); }
-.wo-tile.wo-placed {
-  background: color-mix(in srgb, var(--color-accent) 12%, var(--c-surface));
-  border-color: var(--color-accent);
-}
-.wo-tile:disabled { opacity: .7; cursor: default; }
-
-/* ── Listening question (Block C) ────────────────────── */
-.quiz-listen-wrap { display: flex; justify-content: center; padding: 18px 0 12px; }
-.btn-listen {
-  padding: 13px 22px; border-radius: 999px; border: none;
-  background: color-mix(in srgb, var(--color-accent) 12%, var(--c-surface));
-  color: var(--color-accent); font-size: 16px; font-weight: 600; cursor: pointer;
-}
 
 .quiz-result { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30px; gap: 14px; text-align: center; }
 .quiz-result-xp { font-family: var(--font-heading); font-weight: 800; font-size: 30px; color: var(--color-accent); }

@@ -19,7 +19,6 @@ const COURSES = {
               { prompt: 'Γεια σου', translation: 'Hello', answer: 'Hallo', options: ['Hallo', 'Tschüss', 'Bitte'] },
               { prompt: 'Καλημέρα', translation: 'Good morning', answer: 'Guten Morgen', options: ['Guten Morgen', 'Gute Nacht', 'Guten Tag'] },
               { prompt: 'Αντίο', translation: 'Goodbye', answer: 'Tschüss', options: ['Tschüss', 'Danke', 'Ja'] },
-              { type: 'listening', prompt: 'Guten Morgen', translation: 'Good morning', answer: 'Καλημέρα', options: ['Καλημέρα', 'Καληνύχτα', 'Αντίο'] },
             ] },
           { id: 'u1l2', title: 'Ναι, όχι, ευχαριστώ', sub: 'Yes, no, thank you', xp: 10,
             quiz: [
@@ -121,7 +120,6 @@ const COURSES = {
               { prompt: 'Σ\' αγαπώ', translation: 'I love you', answer: 'Ich liebe dich', options: ['Ich liebe dich', 'Ich mag dich', 'Ich brauche dich'] },
               { prompt: 'Μου λείπεις', translation: 'I miss you', answer: 'Ich vermisse dich', options: ['Ich vermisse dich', 'Ich mag dich', 'Ich brauche dich'] },
               { prompt: 'αγάπη μου', translation: 'my love / darling', answer: 'mein Schatz', options: ['mein Schatz', 'meine Familie', 'mein Freund'] },
-              { type: 'listening', prompt: 'Ich vermisse dich', translation: 'I miss you', answer: 'Μου λείπεις', options: ['Μου λείπεις', 'Σ\' αγαπώ', 'αγάπη μου'] },
             ] },
           { id: 'u5l3', title: 'Η καθημερινότητά μας', sub: 'Our everyday life', xp: 15,
             quiz: [
@@ -149,8 +147,6 @@ const COURSES = {
             quiz: [
               { prompt: 'Σήμερα μαθαίνω γερμανικά', translation: 'Today I am learning German', answer: 'Heute lerne ich Deutsch', options: ['Heute lerne ich Deutsch', 'Heute ich lerne Deutsch', 'Ich heute lerne Deutsch'] },
               { prompt: 'Αύριο πάμε στο σπίτι', translation: 'Tomorrow we are going home', answer: 'Morgen gehen wir nach Hause', options: ['Morgen gehen wir nach Hause', 'Morgen wir gehen nach Hause', 'Wir morgen gehen nach Hause'] },
-              { type: 'word-order', prompt: 'Σήμερα μαθαίνω γερμανικά', translation: 'Heute lerne ich Deutsch', words: ['Heute', 'ich', 'lerne', 'Deutsch'], correctOrder: ['Heute', 'lerne', 'ich', 'Deutsch'] },
-              { type: 'word-order', prompt: 'Αύριο πάμε στο σπίτι', translation: 'Morgen gehen wir nach Hause', words: ['gehen', 'Morgen', 'wir', 'nach', 'Hause'], correctOrder: ['Morgen', 'gehen', 'wir', 'nach', 'Hause'] },
             ] },
           { id: 'u6l4', title: 'Ερωτηματικές λέξεις', sub: 'Question words', xp: 15,
             quiz: [
@@ -364,91 +360,16 @@ const COMPANION_CHIPS = [
   'Erkläre mir kurz seine/ihre aktuelle Lektion',
 ];
 
-// Merges static course data with any custom units/lessons stored in the DB.
-// Uses a lazy require so content.js can be loaded before the DB is ready (e.g. in tests).
-function mergeCustomContent(base, targetLang) {
-  const db = require('./db'); // cached after first call
-
-  // Clone units shallowly so we never mutate COURSES.
-  const units = base.units.map(u => ({ ...u, lessons: [...u.lessons] }));
-
-  const customLessons = db.prepare(
-    'SELECT * FROM custom_lessons WHERE target_lang = ? ORDER BY created_at ASC'
-  ).all(targetLang);
-
-  const customUnits = db.prepare(
-    'SELECT * FROM custom_units WHERE target_lang = ? ORDER BY created_at ASC'
-  ).all(targetLang);
-
-  // Append custom lessons that belong to existing static units.
-  for (const cl of customLessons) {
-    if (cl.unit_id.startsWith('customunit_')) continue; // handled with custom units below
-    const unit = units.find(u => u.id === cl.unit_id);
-    if (!unit) continue;
-    let quiz;
-    try { quiz = JSON.parse(cl.quiz_json); } catch (e) { quiz = []; }
-    unit.lessons.push({ id: `custom_${cl.id}`, title: cl.title, sub: cl.sub, xp: cl.xp, quiz, isCustom: true });
-  }
-
-  // Append custom units (with their own lessons) at the end of the list.
-  for (const cu of customUnits) {
-    const unitId = `customunit_${cu.id}`;
-    const lessons = customLessons
-      .filter(cl => cl.unit_id === unitId)
-      .map(cl => {
-        let quiz;
-        try { quiz = JSON.parse(cl.quiz_json); } catch (e) { quiz = []; }
-        return { id: `custom_${cl.id}`, title: cl.title, sub: cl.sub, xp: cl.xp, quiz, isCustom: true };
-      });
-    units.push({ id: unitId, title: cu.title, sub: cu.sub, level: cu.level, isCustom: true, lessons });
-  }
-
-  return { ...base, units };
-}
+// Quick-reply chips shown to the companion in the Messages tab, so they can
+// send a supportive message with one tap instead of typing. Keyed by the
+// companion's own native language, since they write in their own language.
+const MESSAGE_QUICK_REPLIES = {
+  de: ['Gut gemacht! 💪', 'Ich bin stolz auf dich!', 'Weiter so!', 'Du schaffst das!', 'Bin so gespannt auf morgen 😊'],
+  el: ['Μπράβο σου! 💪', 'Είμαι περήφανος/η για σένα!', 'Συνέχισε έτσι!', 'Τα καταφέρνεις!', 'Ανυπομονώ για αύριο 😊'],
+};
 
 function getCourse(targetLang) {
-  const base = COURSES[targetLang] || COURSES.de;
-  try {
-    return mergeCustomContent(base, targetLang);
-  } catch (e) {
-    // Graceful fallback if DB is unavailable (early startup / tests).
-    return base;
-  }
-}
-
-// Returns the review lesson slots for a course — one after every 3rd unit.
-// IDs are stable so they can be stored in lesson_progress.
-function getReviewSlots(targetLang) {
-  const course = getCourse(targetLang);
-  const units = course.units;
-  const slots = [];
-  for (let i = 2; i < units.length; i += 3) {
-    const coveredUnitIds = units.slice(0, i + 1).map(u => u.id);
-    slots.push({
-      id: `review-${targetLang}-after-${units[i].id}`,
-      afterUnitIndex: i,
-      coveredUnitIds,
-      title: 'Wiederholung',
-      sub: `${units[Math.max(0, i - 1)].title} + ${units[i].title}`,
-      xp: 20,
-    });
-  }
-  return slots;
-}
-
-// Returns all quiz questions from the covered units — the dynamic review pool.
-function getReviewQuestionPool(targetLang, coveredUnitIds) {
-  const course = getCourse(targetLang);
-  const idSet = new Set(coveredUnitIds);
-  const pool = [];
-  for (const unit of course.units) {
-    if (idSet.has(unit.id)) {
-      for (const lesson of unit.lessons) {
-        pool.push(...lesson.quiz);
-      }
-    }
-  }
-  return pool;
+  return COURSES[targetLang] || COURSES.de;
 }
 
 function getAllLessonsFlat(targetLang) {
@@ -471,4 +392,4 @@ function findLesson(targetLang, lessonId) {
   return null;
 }
 
-module.exports = { COURSES, getCourse, getAllLessonsFlat, findLesson, COMPANION_CHIPS, getReviewSlots, getReviewQuestionPool };
+module.exports = { COURSES, getCourse, getAllLessonsFlat, findLesson, COMPANION_CHIPS, MESSAGE_QUICK_REPLIES };

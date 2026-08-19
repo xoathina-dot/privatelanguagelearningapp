@@ -40,6 +40,17 @@ db.exec(`
     PRIMARY KEY (user_id, vocab_id)
   );
 
+  CREATE TABLE IF NOT EXISTS custom_vocab (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    target_lang TEXT NOT NULL,
+    target TEXT NOT NULL,
+    native TEXT NOT NULL,
+    note TEXT,
+    cat TEXT NOT NULL,
+    added_by INTEGER NOT NULL,
+    created_at TEXT NOT NULL
+  );
+
   CREATE TABLE IF NOT EXISTS messages (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     sender_id INTEGER NOT NULL,
@@ -64,41 +75,5 @@ const userColumns = db.prepare("PRAGMA table_info(users)").all();
 if (!userColumns.some(c => c.name === 'role')) {
   db.exec("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'learner'");
 }
-
-// Migration: custom units and lessons tables.
-db.exec(`
-  CREATE TABLE IF NOT EXISTS custom_units (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    target_lang TEXT NOT NULL,
-    title TEXT NOT NULL,
-    sub TEXT NOT NULL DEFAULT '',
-    level TEXT NOT NULL DEFAULT 'A1',
-    created_at TEXT NOT NULL
-  );
-  CREATE TABLE IF NOT EXISTS custom_lessons (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    target_lang TEXT NOT NULL,
-    unit_id TEXT NOT NULL,
-    title TEXT NOT NULL,
-    sub TEXT NOT NULL DEFAULT '',
-    xp INTEGER NOT NULL DEFAULT 10,
-    quiz_json TEXT NOT NULL DEFAULT '[]',
-    created_at TEXT NOT NULL
-  );
-`);
-
-// Migration: custom vocab table.
-db.exec(`
-  CREATE TABLE IF NOT EXISTS custom_vocab (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    target_lang TEXT NOT NULL,
-    target_text TEXT NOT NULL,
-    native_text TEXT NOT NULL,
-    note TEXT NOT NULL DEFAULT '',
-    cat TEXT NOT NULL DEFAULT 'Δικά μας',
-    added_by_user_id INTEGER NOT NULL,
-    created_at TEXT NOT NULL
-  );
-`);
 
 module.exports = db;
